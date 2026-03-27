@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from '../firebase';
 import { useTrucoData, Match, Player, PointEvent } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
-import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle } from 'lucide-react';
+import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag } from 'lucide-react';
 
 export default function MatchPage() {
   const { players, matches } = useTrucoData();
@@ -11,6 +11,8 @@ export default function MatchPage() {
   const [teamThemSelection, setTeamThemSelection] = useState<string[]>([]);
 
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isConfirmingAbandon, setIsConfirmingAbandon] = useState(false);
+  const [isConfirmingMazo, setIsConfirmingMazo] = useState(false);
   const [isShuffleModalOpen, setIsShuffleModalOpen] = useState(false);
   const [shuffleSelectedPlayers, setShuffleSelectedPlayers] = useState<string[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
@@ -158,6 +160,35 @@ export default function MatchPage() {
       handleFirestoreError(error, OperationType.UPDATE, `matches/${currentMatch.id}`);
     }
   };
+
+  // Abandonar: finaliza el partido con los puntajes actuales (rendirse)
+  const abandonMatch = async () => {
+    if (!currentMatch) return;
+    try {
+      await updateDoc(doc(db, 'matches', currentMatch.id), {
+        status: 'completed'
+      });
+      setTeamUsSelection([]);
+      setTeamThemSelection([]);
+      setIsConfirmingAbandon(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `matches/${currentMatch.id}`);
+    }
+  };
+
+  // Irse al mazo: elimina el partido sin guardar (como si nunca hubiera existido)
+  const irseAlMazo = async () => {
+    if (!currentMatch) return;
+    try {
+      await deleteDoc(doc(db, 'matches', currentMatch.id));
+      setTeamUsSelection([]);
+      setTeamThemSelection([]);
+      setIsConfirmingMazo(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `matches/${currentMatch.id}`);
+    }
+  };
+
 
   const togglePlayer = (team: 'Us' | 'Them', playerId: string) => {
     if (team === 'Us') {
@@ -388,21 +419,47 @@ export default function MatchPage() {
   const isPicaPica = (currentMatch.teamUs.length + currentMatch.teamThem.length === 6) &&
                      (currentMatch.scoreUs >= 5 && currentMatch.scoreUs < 15 && currentMatch.scoreThem >= 5 && currentMatch.scoreThem < 15);
 
+  // Solo el creador del partido puede sumar puntos o finalizarlo
+  const isOwner = currentMatch.createdBy === auth.currentUser?.uid;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-32">
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-pulperia-red font-serif">Partido en Curso</h1>
-          <p className="text-pulperia-ink/70 text-sm mt-1 font-serif italic">El primero en llegar a 30 gana.</p>
+          <p className="text-pulperia-ink/70 text-sm mt-1 font-serif italic">
+            {isOwner ? 'El primero en llegar a 30 gana.' : 'Estás viendo este partido en vivo.'}
+          </p>
         </div>
-        <button 
-          onClick={shareMatch}
-          className="p-2 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-full hover:bg-pulperia-gold/20 transition-colors shadow-sm"
-          title="Compartir Partido en Vivo"
-        >
-          <Share2 size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          {isOwner && (
+            <>
+              <button
+                onClick={() => setIsConfirmingMazo(true)}
+                className="px-3 py-1.5 bg-pulperia-bg border border-pulperia-border text-pulperia-ink/70 rounded-xl text-xs font-bold hover:bg-pulperia-gold/20 transition-colors shadow-sm flex items-center gap-1.5"
+                title="Irse al mazo (cancelar partido)"
+              >
+                <X size={14} /> Al mazo
+              </button>
+              <button
+                onClick={() => setIsConfirmingAbandon(true)}
+                className="px-3 py-1.5 bg-pulperia-red/10 border border-pulperia-red/20 text-pulperia-red rounded-xl text-xs font-bold hover:bg-pulperia-red/20 transition-colors shadow-sm flex items-center gap-1.5"
+                title="Abandonar (terminar y guardar)"
+              >
+                <Flag size={14} /> Abandonar
+              </button>
+            </>
+          )}
+          <button
+            onClick={shareMatch}
+            className="p-2 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-full hover:bg-pulperia-gold/20 transition-colors shadow-sm"
+            title="Compartir Partido en Vivo"
+          >
+            <Share2 size={20} />
+          </button>
+        </div>
       </header>
+
 
       {isPicaPica && (
         <div className="bg-amber-100 border border-amber-300 text-amber-900 px-4 py-2 rounded-xl text-center font-bold text-sm uppercase tracking-widest animate-pulse shadow-sm fileteado-border">
@@ -446,10 +503,10 @@ export default function MatchPage() {
             </div>
 
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
-              <button onClick={() => updateScore('Us', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm">+1 Punto</button>
-              <button onClick={() => updateScore('Us', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm">+2 Env/Tru</button>
-              <button onClick={() => updateScore('Us', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm">+3 Real/Ret</button>
-              <button onClick={() => updateScore('Us', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm">+4 Vale 4</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
             </div>
           </div>
 
@@ -487,10 +544,10 @@ export default function MatchPage() {
             </div>
 
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
-              <button onClick={() => updateScore('Them', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm">+1 Punto</button>
-              <button onClick={() => updateScore('Them', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm">+2 Env/Tru</button>
-              <button onClick={() => updateScore('Them', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm">+3 Real/Ret</button>
-              <button onClick={() => updateScore('Them', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm">+4 Vale 4</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
+              <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
             </div>
           </div>
         </div>
@@ -501,7 +558,7 @@ export default function MatchPage() {
             <h3 className="text-xs font-bold text-pulperia-ink/60 uppercase tracking-wider">Historial de Puntos</h3>
             <button 
               onClick={undoLastPoint}
-              disabled={!currentMatch.pointHistory || currentMatch.pointHistory.length === 0}
+              disabled={!isOwner || !currentMatch.pointHistory || currentMatch.pointHistory.length === 0}
               className="flex items-center gap-1 text-xs font-bold text-pulperia-ink/60 hover:text-pulperia-ink disabled:opacity-30 transition-colors"
             >
               <RotateCcw size={14} /> Deshacer último
@@ -538,14 +595,17 @@ export default function MatchPage() {
       )}
 
       <div className="fixed bottom-20 left-4 right-4 z-40 max-w-3xl mx-auto">
-        <button
-          onClick={() => setIsConfirming(true)}
-          className="w-full py-4 bg-pulperia-ink text-white rounded-2xl font-bold text-base hover:bg-zinc-800 transition-all shadow-xl flex items-center justify-center gap-2 border border-pulperia-border"
-        >
-          <Check size={20} /> Finalizar Partido
-        </button>
+        {isOwner && (
+          <button
+            onClick={() => setIsConfirming(true)}
+            className="w-full py-4 bg-pulperia-ink text-white rounded-2xl font-bold text-base hover:bg-zinc-800 transition-all shadow-xl flex items-center justify-center gap-2 border border-pulperia-border"
+          >
+            <Check size={20} /> Finalizar Partido
+          </button>
+        )}
       </div>
 
+      {/* Modal: Finalizar */}
       {isConfirming && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in">
           <div className="card-espanola p-6 max-w-sm w-full shadow-xl">
@@ -554,6 +614,44 @@ export default function MatchPage() {
             <div className="flex gap-3">
               <button onClick={() => setIsConfirming(false)} className="flex-1 py-2 px-4 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-lg font-bold hover:bg-pulperia-gold/20 transition-colors shadow-sm">Cancelar</button>
               <button onClick={finishMatch} className="flex-1 py-2 px-4 bg-pulperia-red text-white rounded-lg font-bold hover:bg-red-800 transition-colors shadow-sm">Finalizar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Abandonar (guarda el partido con puntaje actual) */}
+      {isConfirmingAbandon && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in">
+          <div className="card-espanola p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center gap-3 mb-2 text-pulperia-red">
+              <Flag size={22} />
+              <h3 className="text-2xl font-bold font-serif">Abandonar partido</h3>
+            </div>
+            <p className="text-pulperia-ink/70 text-sm mb-6 italic font-serif">
+              El partido se guardará en el historial con el puntaje actual. ¿Confirmás?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setIsConfirmingAbandon(false)} className="flex-1 py-2 px-4 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-lg font-bold hover:bg-pulperia-gold/20 transition-colors shadow-sm">Cancelar</button>
+              <button onClick={abandonMatch} className="flex-1 py-2 px-4 bg-pulperia-red text-white rounded-lg font-bold hover:bg-red-800 transition-colors shadow-sm">Abandonar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Irse al mazo (borra el partido sin guardar) */}
+      {isConfirmingMazo && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in">
+          <div className="card-espanola p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center gap-3 mb-2 text-pulperia-ink">
+              <X size={22} />
+              <h3 className="text-2xl font-bold font-serif">Irse al mazo</h3>
+            </div>
+            <p className="text-pulperia-ink/70 text-sm mb-6 italic font-serif">
+              El partido se cancelará y <strong>no se guardará</strong> en el historial. Como si nunca hubiera existido. ¿Confirmás?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setIsConfirmingMazo(false)} className="flex-1 py-2 px-4 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-lg font-bold hover:bg-pulperia-gold/20 transition-colors shadow-sm">Cancelar</button>
+              <button onClick={irseAlMazo} className="flex-1 py-2 px-4 bg-pulperia-ink text-white rounded-lg font-bold hover:bg-zinc-700 transition-colors shadow-sm">Al mazo</button>
             </div>
           </div>
         </div>
