@@ -1,0 +1,5 @@
+{
+  "name": "Truco Tracker",
+  "description": "Aplicación para registrar partidos de truco, llevar estadísticas de jugadores y equipos, y sincronizar datos en la nube.",
+  "requestFramePermissions": []
+}

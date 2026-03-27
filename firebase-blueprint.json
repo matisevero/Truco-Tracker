@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "A player who participates in Truco matches.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the player."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the player."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "The user ID of the person who created this player."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the player was created."
+        }
+      },
+      "required": ["name", "createdBy", "createdAt"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "A Truco match between 'Nosotros' and 'Ellos'.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the match."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the match started."
+        },
+        "teamUs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of player IDs in team 'Nosotros'."
+        },
+        "teamThem": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of player IDs in team 'Ellos'."
+        },
+        "scoreUs": {
+          "type": "number",
+          "description": "Score of team 'Nosotros'."
+        },
+        "scoreThem": {
+          "type": "number",
+          "description": "Score of team 'Ellos'."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["in-progress", "completed"],
+          "description": "Current status of the match."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "The user ID of the person who created this match."
+        }
+      },
+      "required": ["date", "teamUs", "teamThem", "scoreUs", "scoreThem", "status", "createdBy"]
+    }
+  },
+  "firestore": {
+    "/players/{playerId}": {
+      "schema": { "$ref": "#/entities/Player" },
+      "description": "Collection of players."
+    },
+    "/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/Match" },
+      "description": "Collection of Truco matches."
+    }
+  }
+}
