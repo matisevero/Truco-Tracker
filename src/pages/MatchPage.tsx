@@ -16,6 +16,13 @@ export default function MatchPage() {
   const [isShuffleModalOpen, setIsShuffleModalOpen] = useState(false);
   const [shuffleSelectedPlayers, setShuffleSelectedPlayers] = useState<string[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
+
+  // Acumulador de toques: muestra cuántos puntos se van a sumar antes de confirmar
+  const [tapAccumUs, setTapAccumUs] = useState(0);
+  const [tapAccumThem, setTapAccumThem] = useState(0);
+  const tapTimerUs = useRef<any>(null);
+  const tapTimerThem = useRef<any>(null);
+  const TAP_DELAY = 800; // ms de pausa antes de confirmar
   
   const [showGuestWarning, setShowGuestWarning] = useState(() => {
     // Only show once per session if they are anonymous
@@ -33,6 +40,8 @@ export default function MatchPage() {
 
   // Find if there's an in-progress match
   const currentMatch = matches.find(m => m.status === 'in-progress');
+  // Solo el creador del partido puede sumar puntos o finalizarlo
+  const isOwner = currentMatch?.createdBy === auth.currentUser?.uid;
 
   // Wake Lock API to keep screen awake during match
   useEffect(() => {
@@ -72,6 +81,30 @@ export default function MatchPage() {
       historyEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [currentMatch?.pointHistory]);
+
+  // Toca el número grande → acumula y después de TAP_DELAY ms confirma
+  const tapScore = (team: 'Us' | 'Them') => {
+    if (!isOwner) return; // solo el dueño puede tocar (se evalúa más abajo pero por seguridad)
+    if (team === 'Us') {
+      setTapAccumUs(prev => prev + 1);
+      if (tapTimerUs.current) clearTimeout(tapTimerUs.current);
+      tapTimerUs.current = setTimeout(() => {
+        setTapAccumUs(prev => {
+          if (prev > 0) updateScore('Us', prev, prev === 1 ? 'Punto' : `${prev} Puntos`);
+          return 0;
+        });
+      }, TAP_DELAY);
+    } else {
+      setTapAccumThem(prev => prev + 1);
+      if (tapTimerThem.current) clearTimeout(tapTimerThem.current);
+      tapTimerThem.current = setTimeout(() => {
+        setTapAccumThem(prev => {
+          if (prev > 0) updateScore('Them', prev, prev === 1 ? 'Punto' : `${prev} Puntos`);
+          return 0;
+        });
+      }, TAP_DELAY);
+    }
+  };
 
   const startMatch = async () => {
     if (teamUsSelection.length === 0 || teamThemSelection.length === 0) {
@@ -419,9 +452,6 @@ export default function MatchPage() {
   const isPicaPica = (currentMatch.teamUs.length + currentMatch.teamThem.length === 6) &&
                      (currentMatch.scoreUs >= 5 && currentMatch.scoreUs < 15 && currentMatch.scoreThem >= 5 && currentMatch.scoreThem < 15);
 
-  // Solo el creador del partido puede sumar puntos o finalizarlo
-  const isOwner = currentMatch.createdBy === auth.currentUser?.uid;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-32">
       <header className="flex justify-between items-center">
@@ -486,7 +516,7 @@ export default function MatchPage() {
             </div>
 
             <div className="relative mb-6">
-              {currentMatch.scoreUs > 0 && (
+              {currentMatch.scoreUs > 0 && isOwner && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); updateScore('Us', -1); }} 
                   className="absolute -top-2 -left-6 w-8 h-8 bg-pulperia-card text-pulperia-ink rounded-full flex items-center justify-center border border-pulperia-border shadow-sm hover:bg-pulperia-gold/20 transition-colors z-10"
@@ -495,11 +525,16 @@ export default function MatchPage() {
                 </button>
               )}
               <div 
-                onClick={() => updateScore('Us', 1, 'Punto')} 
-                className="text-[6rem] md:text-[8rem] font-bebas leading-none tracking-tighter text-pulperia-ink cursor-pointer select-none active:scale-95 transition-transform"
+                onClick={() => isOwner && tapScore('Us')}
+                className={`text-[6rem] md:text-[8rem] font-bebas leading-none tracking-tighter text-pulperia-ink select-none transition-transform ${isOwner ? 'cursor-pointer active:scale-95' : 'cursor-default'}`}
               >
                 {currentMatch.scoreUs}
               </div>
+              {tapAccumUs > 0 && (
+                <div className="absolute -top-2 -right-6 w-8 h-8 bg-pulperia-blue text-white rounded-full flex items-center justify-center font-black text-sm shadow-md animate-bounce">
+                  +{tapAccumUs}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
@@ -527,7 +562,7 @@ export default function MatchPage() {
             </div>
 
             <div className="relative mb-6">
-              {currentMatch.scoreThem > 0 && (
+              {currentMatch.scoreThem > 0 && isOwner && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); updateScore('Them', -1); }} 
                   className="absolute -top-2 -left-6 w-8 h-8 bg-pulperia-card text-pulperia-ink rounded-full flex items-center justify-center border border-pulperia-border shadow-sm hover:bg-pulperia-gold/20 transition-colors z-10"
@@ -536,11 +571,16 @@ export default function MatchPage() {
                 </button>
               )}
               <div 
-                onClick={() => updateScore('Them', 1, 'Punto')} 
-                className="text-[6rem] md:text-[8rem] font-bebas leading-none tracking-tighter text-pulperia-ink cursor-pointer select-none active:scale-95 transition-transform"
+                onClick={() => isOwner && tapScore('Them')}
+                className={`text-[6rem] md:text-[8rem] font-bebas leading-none tracking-tighter text-pulperia-ink select-none transition-transform ${isOwner ? 'cursor-pointer active:scale-95' : 'cursor-default'}`}
               >
                 {currentMatch.scoreThem}
               </div>
+              {tapAccumThem > 0 && (
+                <div className="absolute -top-2 -right-6 w-8 h-8 bg-pulperia-red text-white rounded-full flex items-center justify-center font-black text-sm shadow-md animate-bounce">
+                  +{tapAccumThem}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 w-full max-w-[200px]">

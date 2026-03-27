@@ -1,9 +1,60 @@
 import React, { useState, useMemo } from 'react';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { useTrucoData, Player } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
-import { Plus, User, Edit2, Mail, MessageCircle, X, Trophy, Flame, Skull, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, User, Edit2, Mail, MessageCircle, X, Trophy, Flame, Skull, ChevronDown, Camera, Trash2 } from 'lucide-react';
+
+const CLOUD_NAME = 'dhf6uuftb';
+const UPLOAD_PRESET = 'ml_default';
+
+// Abre el widget de Cloudinary y devuelve la URL resultante
+function openCloudinaryWidget(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const loadAndOpen = () => {
+      const widget = (window as any).cloudinary.createUploadWidget(
+        {
+          cloudName: CLOUD_NAME,
+          uploadPreset: UPLOAD_PRESET,
+          sources: ['local', 'camera'],
+          multiple: false,
+          cropping: true,
+          croppingAspectRatio: 1,
+          showSkipCropButton: false,
+          folder: 'truco-tracker/avatars',
+          transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+          styles: {
+            palette: {
+              window: '#FFFFFF',
+              tabIcon: '#C8102E',
+              link: '#C8102E',
+              action: '#C8102E',
+              sourceBg: '#F4F1EA',
+            },
+          },
+        },
+        (err: any, result: any) => {
+          if (err) { resolve(null); return; }
+          if (result?.event === 'success') {
+            resolve(result.info.secure_url);
+            widget.close();
+          }
+          if (result?.event === 'close') resolve(null);
+        }
+      );
+      widget.open();
+    };
+
+    if ((window as any).cloudinary) {
+      loadAndOpen();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://upload-widget.cloudinary.com/global/all.js';
+      script.onload = loadAndOpen;
+      document.head.appendChild(script);
+    }
+  });
+}
 
 const PlayerRow = ({ p, i, openProfileModal }: { key?: React.Key, p: any, i: number, openProfileModal: (p: any) => void }) => {
   const [expanded, setExpanded] = useState(false);
@@ -45,12 +96,14 @@ export default function PlayersPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', photoUrl: '' });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const addPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPlayerName.trim()) return;
     const nameToAdd = newPlayerName.trim();
-    setNewPlayerName(''); // Clear immediately for better UX
+    setNewPlayerName('');
     try {
       await addDoc(collection(db, 'players'), {
         name: nameToAdd,
@@ -59,7 +112,7 @@ export default function PlayersPage() {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'players');
-      setNewPlayerName(nameToAdd); // Restore if failed
+      setNewPlayerName(nameToAdd);
     }
   };
 
@@ -80,6 +133,29 @@ export default function PlayersPage() {
     setIsEditMode(true);
   };
 
+  const deletePlayer = async () => {
+    if (!selectedPlayer) return;
+    try {
+      await deleteDoc(doc(db, 'players', selectedPlayer.id));
+      setSelectedPlayer(null);
+      setConfirmingDelete(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `players/${selectedPlayer.id}`);
+    }
+  };
+
+  const handleUploadPlayerPhoto = async () => {
+    setUploadingPhoto(true);
+    try {
+      const url = await openCloudinaryWidget();
+      if (url) {
+        setEditForm(prev => ({ ...prev, photoUrl: url }));
+      }
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const savePlayer = async () => {
     if (!editingPlayer || !editForm.name.trim()) return;
     try {
@@ -90,7 +166,6 @@ export default function PlayersPage() {
         phone: editForm.phone.trim() || null,
         photoUrl: editForm.photoUrl.trim() || null,
       });
-      // Update local selected player state to reflect changes immediately
       setSelectedPlayer({
         ...selectedPlayer,
         name: editForm.name.trim(),
@@ -131,7 +206,6 @@ export default function PlayersPage() {
       };
     });
 
-    // Sort matches by date ascending for streak calculation
     const sortedMatches = [...matches].filter(m => m.status === 'completed').sort((a, b) => {
       const dateA = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime();
       const dateB = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime();
@@ -141,13 +215,11 @@ export default function PlayersPage() {
     sortedMatches.forEach(m => {
       const usWon = m.scoreUs > m.scoreThem;
       
-      // Player stats & Streaks & Nemesis
       m.teamUs.forEach(pid => {
         if (!pStats[pid]) return;
         pStats[pid].played++;
         pStats[pid].pointsFor += m.scoreUs;
         pStats[pid].pointsAgainst += m.scoreThem;
-        
         if (usWon) {
           pStats[pid].won++;
           pStats[pid].currentStreak++;
@@ -156,7 +228,6 @@ export default function PlayersPage() {
           pStats[pid].lost++;
           pStats[pid].currentStreak = 0;
         }
-
         m.teamThem.forEach(oppId => {
           if (!pStats[pid].opponents[oppId]) pStats[pid].opponents[oppId] = { played: 0, lostAgainst: 0 };
           pStats[pid].opponents[oppId].played++;
@@ -169,7 +240,6 @@ export default function PlayersPage() {
         pStats[pid].played++;
         pStats[pid].pointsFor += m.scoreThem;
         pStats[pid].pointsAgainst += m.scoreUs;
-
         if (!usWon) {
           pStats[pid].won++;
           pStats[pid].currentStreak++;
@@ -178,7 +248,6 @@ export default function PlayersPage() {
           pStats[pid].lost++;
           pStats[pid].currentStreak = 0;
         }
-
         m.teamUs.forEach(oppId => {
           if (!pStats[pid].opponents[oppId]) pStats[pid].opponents[oppId] = { played: 0, lostAgainst: 0 };
           pStats[pid].opponents[oppId].played++;
@@ -186,7 +255,6 @@ export default function PlayersPage() {
         });
       });
 
-      // Team stats
       if (m.teamUs.length > 1) {
         const teamUsKey = [...m.teamUs].sort().join(',');
         if (!tStats[teamUsKey]) tStats[teamUsKey] = { played: 0, won: 0, lost: 0, playerNames: m.teamUs.map(id => players.find(p => p.id === id)?.name || 'Desconocido') };
@@ -204,12 +272,10 @@ export default function PlayersPage() {
 
     const processedPlayerStats = players.map(p => {
       const stats = pStats[p.id];
-      
-      // Calculate Nemesis
       let nemesisId = null;
       let highestLossRate = -1;
       Object.entries(stats.opponents).forEach(([oppId, oppStats]) => {
-        if (oppStats.played >= 2) { // Minimum 2 matches to be considered a nemesis
+        if (oppStats.played >= 2) {
           const lossRate = oppStats.lostAgainst / oppStats.played;
           if (lossRate > highestLossRate) {
             highestLossRate = lossRate;
@@ -218,7 +284,6 @@ export default function PlayersPage() {
         }
       });
       const nemesisName = nemesisId ? players.find(pl => pl.id === nemesisId)?.name : null;
-
       return {
         ...p,
         ...stats,
@@ -231,7 +296,7 @@ export default function PlayersPage() {
     const processedTeamStats = Object.values(tStats).map(t => ({
       ...t,
       winRate: t.played > 0 ? (t.won / t.played) * 100 : 0
-    })).filter(t => t.played >= 2).sort((a, b) => b.winRate - a.winRate); // Only teams with at least 2 matches
+    })).filter(t => t.played >= 2).sort((a, b) => b.winRate - a.winRate);
 
     return { playerStats: processedPlayerStats, teamStats: processedTeamStats };
   }, [players, matches]);
@@ -304,7 +369,7 @@ export default function PlayersPage() {
         </div>
       </div>
 
-      {/* Player Profile & Edit Modal */}
+      {/* Modal de perfil y edición */}
       {selectedPlayer && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in">
           <div className="card-espanola max-w-md w-full shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -335,6 +400,12 @@ export default function PlayersPage() {
                       >
                         <Edit2 size={12} /> Editar Perfil
                       </button>
+                      <button
+                        onClick={() => setConfirmingDelete(true)}
+                        className="flex items-center gap-1 text-xs font-bold bg-black/20 hover:bg-red-900/60 px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        <Trash2 size={12} /> Eliminar
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -350,7 +421,6 @@ export default function PlayersPage() {
             <div className="p-6 overflow-y-auto bg-pulperia-bg">
               {!isEditMode ? (
                 <div className="space-y-6">
-                  {/* Stats Grid */}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-pulperia-card p-3 rounded-xl text-center border border-pulperia-border shadow-sm">
                       <p className="text-xs font-bold text-pulperia-ink/60 uppercase">Partidos</p>
@@ -366,12 +436,10 @@ export default function PlayersPage() {
                     </div>
                   </div>
 
-                  {/* Highlights */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-bold text-pulperia-ink flex items-center gap-2 font-serif text-lg">
                       <Trophy size={18} className="text-pulperia-gold" /> Destacados
                     </h4>
-                    
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-orange-50 p-3 rounded-xl border border-orange-200 flex items-start gap-3 shadow-sm">
                         <Flame className="text-orange-600 shrink-0 mt-0.5" size={18} />
@@ -381,7 +449,6 @@ export default function PlayersPage() {
                           <p className="text-[10px] text-orange-600 mt-1 font-bold">Récord: {selectedPlayer.maxStreak}</p>
                         </div>
                       </div>
-
                       <div className="bg-purple-50 p-3 rounded-xl border border-purple-200 flex items-start gap-3 shadow-sm">
                         <Skull className="text-purple-600 shrink-0 mt-0.5" size={18} />
                         <div>
@@ -394,7 +461,6 @@ export default function PlayersPage() {
                     </div>
                   </div>
 
-                  {/* Contact / Invites */}
                   <div className="pt-4 border-t border-pulperia-border">
                     <h4 className="text-xs font-bold text-pulperia-ink/60 uppercase mb-3">Invitar a jugar</h4>
                     {(selectedPlayer.phone || selectedPlayer.email) ? (
@@ -431,6 +497,32 @@ export default function PlayersPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
+
+                  {/* Foto del jugador */}
+                  <div>
+                    <label className="block text-xs font-bold text-pulperia-ink/60 uppercase tracking-wider mb-2">Foto</label>
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={editForm.photoUrl || getSpanishCardAvatar(editForm.name)}
+                        alt={editForm.name}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-pulperia-border bg-pulperia-bg"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleUploadPlayerPhoto}
+                        disabled={uploadingPhoto}
+                        className="flex items-center gap-2 px-4 py-2 bg-pulperia-ink/10 text-pulperia-ink rounded-lg font-bold text-sm hover:bg-pulperia-ink/20 transition-colors disabled:opacity-50"
+                      >
+                        {uploadingPhoto
+                          ? <div className="w-4 h-4 border-2 border-pulperia-ink border-t-transparent rounded-full animate-spin" />
+                          : <Camera size={16} />
+                        }
+                        {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-pulperia-ink/60 uppercase tracking-wider mb-1">Nombre</label>
                     <input
@@ -463,17 +555,6 @@ export default function PlayersPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-pulperia-ink/60 uppercase tracking-wider mb-1">URL de Foto (Opcional)</label>
-                    <input
-                      type="url"
-                      value={editForm.photoUrl}
-                      onChange={(e) => setEditForm({ ...editForm, photoUrl: e.target.value })}
-                      placeholder="https://ejemplo.com/foto.jpg"
-                      className="w-full px-4 py-2.5 bg-pulperia-card border border-pulperia-border rounded-lg focus:outline-none focus:ring-2 focus:ring-pulperia-red font-medium text-sm"
-                    />
-                  </div>
-
                   <div className="pt-4 flex gap-3">
                     <button
                       onClick={() => setIsEditMode(false)}
@@ -491,6 +572,35 @@ export default function PlayersPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar eliminar jugador */}
+      {confirmingDelete && selectedPlayer && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4 animate-in fade-in">
+          <div className="card-espanola p-6 max-w-sm w-full shadow-xl">
+            <div className="flex items-center gap-3 mb-2 text-pulperia-red">
+              <Trash2 size={22} />
+              <h3 className="text-xl font-bold font-serif">Eliminar jugador</h3>
+            </div>
+            <p className="text-pulperia-ink/70 text-sm mb-6 italic font-serif">
+              ¿Estás seguro de que querés eliminar a <strong>{selectedPlayer.name}</strong>? Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                className="flex-1 py-2.5 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-lg font-bold text-sm hover:bg-pulperia-gold/20 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={deletePlayer}
+                className="flex-1 py-2.5 bg-pulperia-red text-white rounded-lg font-bold text-sm hover:bg-red-800 transition-colors shadow-sm"
+              >
+                Eliminar
+              </button>
             </div>
           </div>
         </div>
