@@ -2,97 +2,28 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: players
-    // Document ID: auto-generated
-    // Fields:
-    //   - name: string (required, max 50 chars)
-    //   - createdBy: string (required, must match auth.uid)
-    //   - createdAt: timestamp (required)
-    //
-    // Collection: matches
-    // Document ID: auto-generated
-    // Fields:
-    //   - date: timestamp (required)
-    //   - teamUs: list of strings (required, max 3)
-    //   - teamThem: list of strings (required, max 3)
-    //   - scoreUs: number (required, 0-30)
-    //   - scoreThem: number (required, 0-30)
-    //   - status: string (required, 'in-progress' or 'completed')
-    //   - createdBy: string (required, must match auth.uid)
-    //
-    // ===============================================================
 
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function validStringLength(field, minLen, maxLen) {
-      return request.resource.data[field] is string &&
-        request.resource.data[field].size() >= minLen &&
-        request.resource.data[field].size() <= maxLen;
-    }
-
-    function isValidPlayer(data) {
-      return hasOnlyAllowedFields(['name', 'createdBy', 'createdAt']) &&
-             validStringLength('name', 1, 50) &&
-             data.createdBy == request.auth.uid &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidMatch(data) {
-      return hasOnlyAllowedFields(['date', 'teamUs', 'teamThem', 'scoreUs', 'scoreThem', 'status', 'createdBy']) &&
-             data.date is timestamp &&
-             data.teamUs is list && data.teamUs.size() <= 3 &&
-             data.teamThem is list && data.teamThem.size() <= 3 &&
-             data.scoreUs is number && data.scoreUs >= 0 && data.scoreUs <= 30 &&
-             data.scoreThem is number && data.scoreThem >= 0 && data.scoreThem <= 30 &&
-             data.status in ['in-progress', 'completed'] &&
-             data.createdBy == request.auth.uid;
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
-    match /players/{playerId} {
-      allow read: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
-      allow create: if isAuthenticated() && isValidPlayer(request.resource.data);
-      allow update: if isAuthenticated() && 
-                    resource.data.createdBy == request.auth.uid &&
-                    isValidPlayer(request.resource.data) &&
-                    request.resource.data.createdBy == resource.data.createdBy &&
-                    request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
-    }
-
+    // ── Matches ────────────────────────────────────────────────────────────
     match /matches/{matchId} {
-      allow read: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
-      allow create: if isAuthenticated() && isValidMatch(request.resource.data);
-      allow update: if isAuthenticated() && 
-                    resource.data.createdBy == request.auth.uid &&
-                    isValidMatch(request.resource.data) &&
-                    request.resource.data.createdBy == resource.data.createdBy &&
-                    request.resource.data.date == resource.data.date;
-      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+      // Lectura pública: cualquiera con el link puede ver el partido en vivo
+      allow read: if true;
+
+      // Escritura: solo el dueño autenticado puede crear/editar/borrar
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid;
+
+      allow update, delete: if request.auth != null
+                             && resource.data.createdBy == request.auth.uid;
     }
+
+    // ── Players ────────────────────────────────────────────────────────────
+    match /players/{playerId} {
+      allow read, write: if request.auth != null
+                          && (
+                            request.auth.uid == resource.data.createdBy
+                            || request.auth.uid == request.resource.data.createdBy
+                          );
+    }
+
   }
 }
