@@ -287,17 +287,17 @@ export default function MatchPage() {
       || currentMatch.teamThem.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ');
 
     const liveUrl = `${window.location.origin}/match/${currentMatch.id}`;
-    const shareText = `🃏 Seguí el truco en vivo!\n${usNames} vs ${themNames}`;
+    // La URL va dentro del texto para que siempre aparezca en WhatsApp y otras apps
+    const shareText = `🃏 Seguí el truco en vivo!\n${usNames} vs ${themNames}\n${liveUrl}`;
 
     try {
       if (navigator.share) {
         await navigator.share({
           title: 'Truco en vivo',
           text: shareText,
-          url: liveUrl,
         });
       } else {
-        await navigator.clipboard.writeText(`${shareText}\n${liveUrl}`);
+        await navigator.clipboard.writeText(shareText);
         alert('¡Link copiado! Pegalo donde quieras.');
       }
     } catch (error: any) {
