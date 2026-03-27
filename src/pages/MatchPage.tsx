@@ -538,10 +538,39 @@ export default function MatchPage() {
             </div>
 
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
-              <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
-              <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
-              <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
-              <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
+              {/* Mobile: botones simples / Desktop: botones divididos */}
+              <div className="md:hidden flex flex-col gap-2 w-full">
+                <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
+              </div>
+              <div className="hidden md:flex flex-col gap-2 w-full">
+                {/* +1: Punto | No Querido */}
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'Punto')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
+                  <div className="w-px bg-pulperia-blue/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'No Querido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">No Quer.</button>
+                </div>
+                {/* +2: Envido | Truco */}
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+2 Envido</button>
+                  <div className="w-px bg-pulperia-blue/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Truco')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Truco</button>
+                </div>
+                {/* +3: Real Envido | Retruco */}
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 R.Env</button>
+                  <div className="w-px bg-pulperia-blue/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Retruco')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Retruco</button>
+                </div>
+                {/* +4: Falta Envido | Vale 4 */}
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Falta Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+4 F.Env</button>
+                  <div className="w-px bg-pulperia-blue/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Vale 4</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -582,19 +611,44 @@ export default function MatchPage() {
                 </div>
               )}
             </div>
-
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
-              <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
-              <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
-              <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
-              <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
+              {/* Mobile */}
+              <div className="md:hidden flex flex-col gap-2 w-full">
+                <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
+              </div>
+              {/* Desktop */}
+              <div className="hidden md:flex flex-col gap-2 w-full">
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'Punto')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
+                  <div className="w-px bg-pulperia-red/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'No Querido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">No Quer.</button>
+                </div>
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+2 Envido</button>
+                  <div className="w-px bg-pulperia-red/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Truco')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Truco</button>
+                </div>
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 R.Env</button>
+                  <div className="w-px bg-pulperia-red/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Retruco')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Retruco</button>
+                </div>
+                <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Falta Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+4 F.Env</button>
+                  <div className="w-px bg-pulperia-red/20" />
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Vale 4</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Shared History */}
         <div className="border-t border-pulperia-border bg-pulperia-card flex flex-col h-48">
-          <div className="p-3 border-b border-pulperia-border flex justify-between items-center">
+          <div className="px-4 py-3 border-b border-pulperia-border flex justify-between items-center">
             <h3 className="text-xs font-bold text-pulperia-ink/60 uppercase tracking-wider">Historial de Puntos</h3>
             <button 
               onClick={undoLastPoint}
@@ -604,16 +658,16 @@ export default function MatchPage() {
               <RotateCcw size={14} /> Deshacer último
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-1">
+          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
             {(!currentMatch.pointHistory || currentMatch.pointHistory.length === 0) ? (
               <p className="text-sm text-pulperia-ink/40 text-center mt-4 italic font-serif">No hay puntos registrados aún.</p>
             ) : (
               currentMatch.pointHistory.map((event) => (
                 <div key={event.id} className="grid grid-cols-2 text-sm animate-in slide-in-from-bottom-2 fade-in">
-                  <div className={`text-right pr-4 py-1 ${event.team === 'Us' ? 'font-bold text-pulperia-blue' : 'text-transparent'}`}>
+                  <div className={`text-right pr-3 py-1 ${event.team === 'Us' ? 'font-bold text-pulperia-blue' : 'text-transparent'}`}>
                     {event.team === 'Us' ? `+${event.points} (${event.reason})` : '-'}
                   </div>
-                  <div className={`text-left pl-4 py-1 border-l border-pulperia-border ${event.team === 'Them' ? 'font-bold text-pulperia-red' : 'text-transparent'}`}>
+                  <div className={`text-left pl-3 py-1 border-l border-pulperia-border ${event.team === 'Them' ? 'font-bold text-pulperia-red' : 'text-transparent'}`}>
                     {event.team === 'Them' ? `+${event.points} (${event.reason})` : '-'}
                   </div>
                 </div>
@@ -625,24 +679,52 @@ export default function MatchPage() {
       </div>
       
       {(currentMatch.scoreUs >= 30 || currentMatch.scoreThem >= 30) && (
-        <div className="bg-green-50 border border-green-200 p-5 rounded-2xl flex items-center gap-4 text-green-800 shadow-sm fileteado-border">
-          <Trophy className="w-10 h-10 text-green-600" />
-          <div>
-            <h3 className="text-xl font-bold font-serif">¡Partido Terminado!</h3>
-            <p className="text-sm font-medium">El equipo {currentMatch.scoreUs >= 30 ? 'Nosotros' : 'Ellos'} ha ganado.</p>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 animate-in fade-in duration-500">
+          <div className="card-espanola max-w-sm w-full shadow-2xl text-center p-8 fileteado-border animate-in zoom-in-95 duration-500">
+            {/* Espadas animadas */}
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <span className="text-5xl animate-[spin_2s_ease-in-out_1]">⚔️</span>
+            </div>
+            <div className="flex justify-center gap-4 mb-2">
+              <span className="text-4xl animate-bounce" style={{ animationDelay: '0ms' }}>🃏</span>
+              <span className="text-4xl animate-bounce" style={{ animationDelay: '150ms' }}>🃏</span>
+              <span className="text-4xl animate-bounce" style={{ animationDelay: '300ms' }}>🃏</span>
+            </div>
+            <h2 className="text-4xl font-black text-pulperia-red font-serif mt-4 mb-1">
+              ¡Truco!
+            </h2>
+            <h3 className="text-2xl font-bold text-pulperia-ink font-serif mb-2">
+              Ganó <span className="text-pulperia-red">{currentMatch.scoreUs >= 30 ? 'Nosotros' : 'Ellos'}</span>
+            </h3>
+            <p className="text-pulperia-ink/60 font-serif italic text-sm mb-6">
+              {currentMatch.scoreUs} — {currentMatch.scoreThem}
+            </p>
+            {isOwner && (
+              <button
+                onClick={finishMatch}
+                className="w-full py-4 bg-pulperia-red text-white rounded-2xl font-bold text-lg hover:bg-red-800 transition-all shadow-xl flex items-center justify-center gap-2"
+              >
+                <Check size={22} /> Guardar Partido
+              </button>
+            )}
+            {!isOwner && (
+              <p className="text-pulperia-ink/50 text-sm italic font-serif">El organizador guardará el resultado.</p>
+            )}
           </div>
         </div>
       )}
 
-      <div className="fixed bottom-20 left-4 right-4 z-40 max-w-3xl mx-auto">
-        {isOwner && (
-          <button
-            onClick={() => setIsConfirming(true)}
-            className="w-full py-4 bg-pulperia-ink text-white rounded-2xl font-bold text-base hover:bg-zinc-800 transition-all shadow-xl flex items-center justify-center gap-2 border border-pulperia-border"
-          >
-            <Check size={20} /> Finalizar Partido
-          </button>
-        )}
+      <div className="fixed bottom-20 md:bottom-6 left-0 right-0 md:left-64 z-40 px-4">
+        <div className="max-w-3xl mx-auto">
+          {isOwner && (
+            <button
+              onClick={() => setIsConfirming(true)}
+              className="w-full py-4 bg-pulperia-ink text-white rounded-2xl font-bold text-base hover:bg-zinc-800 transition-all shadow-xl flex items-center justify-center gap-2 border border-pulperia-border"
+            >
+              <Check size={20} /> Finalizar Partido
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Modal: Finalizar */}
