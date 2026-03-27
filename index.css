@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@400;500;600;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-pulperia-bg: #F4F1EA;
+  --color-pulperia-card: #FFFFFF;
+  --color-pulperia-red: #C8102E;
+  --color-pulperia-green: #006400;
+  --color-pulperia-gold: #D4AF37;
+  --color-pulperia-blue: #0033A0;
+  --color-pulperia-ink: #2C2A29;
+  --color-pulperia-border: #E5E0D8;
+}
+
+body {
+  background-color: var(--color-pulperia-bg);
+  color: var(--color-pulperia-ink);
+  font-family: var(--font-serif);
+}
+
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: var(--font-serif);
+}
+
+/* ── Modo Minimalista ──────────────────────────────── */
+html.minimal {
+  --color-pulperia-bg: #f8fafc;
+  --color-pulperia-card: #ffffff;
+  --color-pulperia-red: #2563eb;
+  --color-pulperia-green: #16a34a;
+  --color-pulperia-gold: #94a3b8;
+  --color-pulperia-blue: #2563eb;
+  --color-pulperia-ink: #0f172a;
+  --color-pulperia-border: #e2e8f0;
+}
+
+html.minimal body {
+  font-family: var(--font-sans);
+}
+
+html.minimal h1,
+html.minimal h2,
+html.minimal h3,
+html.minimal h4,
+html.minimal h5,
+html.minimal h6,
+html.minimal .font-serif {
+  font-family: var(--font-sans);
+  font-style: normal;
+}
+
+html.minimal .card-espanola::after {
+  display: none;
+}
+
+html.minimal .fileteado-border {
+  border-color: var(--color-pulperia-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+html.minimal .fileteado-border::before {
+  display: none;
+}
+/* ──────────────────────────────────────────────────── */
+
+.fileteado-border {
+  border: 2px solid var(--color-pulperia-gold);
+  box-shadow: 0 4px 6px -1px rgba(200, 16, 46, 0.1), 0 2px 4px -1px rgba(0, 100, 0, 0.06);
+  position: relative;
+}
+.fileteado-border::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 4px; right: 4px; bottom: 4px;
+  border: 1px solid var(--color-pulperia-red);
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.3;
+}
+
+.card-espanola {
+  background-color: var(--color-pulperia-card);
+  border: 1px solid var(--color-pulperia-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(44, 42, 41, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+.card-espanola::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  pointer-events: none;
+}
