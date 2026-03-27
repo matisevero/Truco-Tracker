@@ -515,7 +515,7 @@ export default function MatchPage() {
               {currentMatch.scoreUs < 15 ? 'Malas' : 'Buenas'}
             </div>
 
-            <div className="relative mb-6">
+            <div className="relative mb-3">
               {currentMatch.scoreUs > 0 && isOwner && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); updateScore('Us', -1); }} 
@@ -537,38 +537,49 @@ export default function MatchPage() {
               )}
             </div>
 
+            {/* Barra de progreso */}
+            <div className="w-full mb-4 bg-pulperia-border rounded-full h-1.5">
+              <div
+                className="h-1.5 rounded-full bg-pulperia-blue transition-all duration-500"
+                style={{ width: `${Math.min(100, (currentMatch.scoreUs / 30) * 100)}%` }}
+              />
+            </div>
+
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
-              {/* Mobile: botones simples / Desktop: botones divididos */}
+              {/* Mobile */}
               <div className="md:hidden flex flex-col gap-2 w-full">
                 <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
                 <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
-                <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 R.Env/Ret</button>
                 <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-blue/10 text-pulperia-blue rounded-lg font-bold text-sm border border-pulperia-blue/20 hover:bg-pulperia-blue/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
               </div>
+              {/* Desktop dividido */}
               <div className="hidden md:flex flex-col gap-2 w-full">
-                {/* +1: Punto | No Querido */}
+                {/* Punto | No Querido (+1 ambos) */}
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
                   <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'Punto')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
                   <div className="w-px bg-pulperia-blue/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'No Querido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">No Quer.</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 1, 'No Querido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+1 No Quer.</button>
                 </div>
-                {/* +2: Envido | Truco */}
+                {/* Envido (+2) | Truco (+2) */}
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
                   <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+2 Envido</button>
                   <div className="w-px bg-pulperia-blue/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Truco')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Truco</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 2, 'Truco')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+2 Truco</button>
                 </div>
-                {/* +3: Real Envido | Retruco */}
+                {/* Real Envido (+3) | Retruco (+3) */}
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
-                  <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 R.Env</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Real Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 Real Env.</button>
                   <div className="w-px bg-pulperia-blue/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Retruco')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Retruco</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 3, 'Retruco')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 Retruco</button>
                 </div>
-                {/* +4: Falta Envido | Vale 4 */}
+                {/* Falta Envido (variable) | Vale 4 */}
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-blue/20 shadow-sm">
-                  <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Falta Envido')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+4 F.Env</button>
+                  <button disabled={!isOwner} onClick={() => { const pts = Math.max(1, 30 - currentMatch.scoreUs); updateScore('Us', pts, 'Falta Envido'); }} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    +{Math.max(1, 30 - currentMatch.scoreUs)} F.Envido
+                  </button>
                   <div className="w-px bg-pulperia-blue/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Vale 4</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Us', 4, 'Vale 4')} className="flex-1 py-2 bg-pulperia-blue/10 text-pulperia-blue font-bold text-xs hover:bg-pulperia-blue/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
                 </div>
               </div>
             </div>
@@ -611,35 +622,44 @@ export default function MatchPage() {
                 </div>
               )}
             </div>
+            {/* Barra de progreso */}
+            <div className="w-full mb-4 bg-pulperia-border rounded-full h-1.5">
+              <div
+                className="h-1.5 rounded-full bg-pulperia-red transition-all duration-500"
+                style={{ width: `${Math.min(100, (currentMatch.scoreThem / 30) * 100)}%` }}
+              />
+            </div>
             <div className="flex flex-col gap-2 w-full max-w-[200px]">
               {/* Mobile */}
               <div className="md:hidden flex flex-col gap-2 w-full">
                 <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'Punto')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
                 <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Envido / Truco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+2 Env/Tru</button>
-                <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 Real/Ret</button>
+                <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido / Retruco')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+3 R.Env/Ret</button>
                 <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="w-full py-2.5 bg-pulperia-red/10 text-pulperia-red rounded-lg font-bold text-sm border border-pulperia-red/20 hover:bg-pulperia-red/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
               </div>
-              {/* Desktop */}
+              {/* Desktop dividido */}
               <div className="hidden md:flex flex-col gap-2 w-full">
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
                   <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'Punto')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+1 Punto</button>
                   <div className="w-px bg-pulperia-red/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'No Querido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">No Quer.</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 1, 'No Querido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+1 No Quer.</button>
                 </div>
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
                   <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+2 Envido</button>
                   <div className="w-px bg-pulperia-red/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Truco')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Truco</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 2, 'Truco')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+2 Truco</button>
                 </div>
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
-                  <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 R.Env</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Real Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 Real Env.</button>
                   <div className="w-px bg-pulperia-red/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Retruco')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Retruco</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 3, 'Retruco')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+3 Retruco</button>
                 </div>
                 <div className="flex rounded-lg overflow-hidden border border-pulperia-red/20 shadow-sm">
-                  <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Falta Envido')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+4 F.Env</button>
+                  <button disabled={!isOwner} onClick={() => { const pts = Math.max(1, 30 - currentMatch.scoreThem); updateScore('Them', pts, 'Falta Envido'); }} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    +{Math.max(1, 30 - currentMatch.scoreThem)} F.Envido
+                  </button>
                   <div className="w-px bg-pulperia-red/20" />
-                  <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Vale 4</button>
+                  <button disabled={!isOwner} onClick={() => updateScore('Them', 4, 'Vale 4')} className="flex-1 py-2 bg-pulperia-red/10 text-pulperia-red font-bold text-xs hover:bg-pulperia-red/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+4 Vale 4</button>
                 </div>
               </div>
             </div>
