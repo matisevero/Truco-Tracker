@@ -25,6 +25,47 @@ h1, h2, h3, h4, h5, h6, .font-serif {
   font-family: var(--font-serif);
 }
 
+/* ── Modo Minimalista ──────────────────────────────── */
+html.minimal {
+  --color-pulperia-bg: #f8fafc;
+  --color-pulperia-card: #ffffff;
+  --color-pulperia-red: #2563eb;
+  --color-pulperia-green: #16a34a;
+  --color-pulperia-gold: #94a3b8;
+  --color-pulperia-blue: #2563eb;
+  --color-pulperia-ink: #0f172a;
+  --color-pulperia-border: #e2e8f0;
+}
+
+html.minimal body {
+  font-family: var(--font-sans);
+}
+
+html.minimal h1,
+html.minimal h2,
+html.minimal h3,
+html.minimal h4,
+html.minimal h5,
+html.minimal h6,
+html.minimal .font-serif {
+  font-family: var(--font-sans);
+  font-style: normal;
+}
+
+html.minimal .card-espanola::after {
+  display: none;
+}
+
+html.minimal .fileteado-border {
+  border-color: var(--color-pulperia-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+html.minimal .fileteado-border::before {
+  display: none;
+}
+/* ──────────────────────────────────────────────────── */
+
 .fileteado-border {
   border: 2px solid var(--color-pulperia-gold);
   box-shadow: 0 4px 6px -1px rgba(200, 16, 46, 0.1), 0 2px 4px -1px rgba(0, 100, 0, 0.06);
