@@ -169,7 +169,7 @@ export default function HistoryPage() {
                       <p className="text-[10px] font-bold tracking-wider text-zinc-400 mb-1">Equipo Nosotros</p>
                       <p className="font-medium text-zinc-700">{getPlayerNames(match.teamUs)}</p>
                     </div>
-                    <div className="w-20 shrink-0"></div>
+                    <div className="w-10 shrink-0"></div>
                     <div className="flex-1 text-left">
                       <p className="text-[10px] font-bold tracking-wider text-zinc-400 mb-1">Equipo Ellos</p>
                       <p className="font-medium text-zinc-700">{getPlayerNames(match.teamThem)}</p>

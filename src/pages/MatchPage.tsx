@@ -212,20 +212,33 @@ export default function MatchPage() {
   };
 
   const shareMatch = async () => {
-    const url = window.location.href;
+    const usNames = currentMatch
+      ? currentMatch.teamUs.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ')
+      : 'Nosotros';
+    const themNames = currentMatch
+      ? currentMatch.teamThem.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ')
+      : 'Ellos';
+    const scoreUs = currentMatch?.scoreUs ?? 0;
+    const scoreThem = currentMatch?.scoreThem ?? 0;
+
+    const shareText = `🃏 Truco en vivo!\n${usNames}: ${scoreUs} pts\n${themNames}: ${scoreThem} pts`;
+    const shareUrl = window.location.href;
+
     try {
       if (navigator.share) {
         await navigator.share({
           title: 'Truco Tracker - Partido en Vivo',
-          text: 'Sigue el partido en vivo en Truco Tracker',
-          url: url
+          text: shareText,
+          url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(url);
-        alert('Enlace copiado al portapapeles');
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+        alert('¡Marcador copiado! Pegalo donde quieras.');
       }
-    } catch (error) {
-      console.error('Error sharing:', error);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Error sharing:', error);
+      }
     }
   };
 
@@ -402,7 +415,7 @@ export default function MatchPage() {
           <div className="p-4 md:p-6 flex flex-col items-center relative bg-pulperia-bg">
             <div className="absolute top-0 left-0 w-full h-1 bg-pulperia-blue" />
             <h2 className="text-xl font-bold text-pulperia-ink mb-1 font-serif">Nosotros</h2>
-            <div className="flex flex-wrap justify-center gap-1 mb-4 min-h-[24px]">
+            <div className="flex flex-wrap justify-center gap-1 mb-4 h-[56px] overflow-hidden content-start">
               {currentMatch.teamUs.map(id => (
                 <span key={id} className="text-[10px] font-bold text-pulperia-ink/70 bg-pulperia-card border border-pulperia-border px-1.5 py-0.5 rounded shadow-sm">
                   {players.find(p => p.id === id)?.name || 'Jugador'}
@@ -443,7 +456,7 @@ export default function MatchPage() {
           <div className="p-4 md:p-6 flex flex-col items-center relative bg-pulperia-bg">
             <div className="absolute top-0 left-0 w-full h-1 bg-pulperia-red" />
             <h2 className="text-xl font-bold text-pulperia-ink mb-1 font-serif">Ellos</h2>
-            <div className="flex flex-wrap justify-center gap-1 mb-4 min-h-[24px]">
+            <div className="flex flex-wrap justify-center gap-1 mb-4 h-[56px] overflow-hidden content-start">
               {currentMatch.teamThem.map(id => (
                 <span key={id} className="text-[10px] font-bold text-pulperia-ink/70 bg-pulperia-card border border-pulperia-border px-1.5 py-0.5 rounded shadow-sm">
                   {players.find(p => p.id === id)?.name || 'Jugador'}
