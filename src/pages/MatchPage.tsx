@@ -81,6 +81,9 @@ export default function MatchPage() {
         date: serverTimestamp(),
         teamUs: teamUsSelection,
         teamThem: teamThemSelection,
+        // Nombres denormalizados para la vista pública sin auth
+        teamUsNames: teamUsSelection.map(id => players.find(p => p.id === id)?.name || 'Jugador'),
+        teamThemNames: teamThemSelection.map(id => players.find(p => p.id === id)?.name || 'Jugador'),
         scoreUs: 0,
         scoreThem: 0,
         status: 'in-progress',
@@ -212,28 +215,26 @@ export default function MatchPage() {
   };
 
   const shareMatch = async () => {
-    const usNames = currentMatch
-      ? currentMatch.teamUs.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ')
-      : 'Nosotros';
-    const themNames = currentMatch
-      ? currentMatch.teamThem.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ')
-      : 'Ellos';
-    const scoreUs = currentMatch?.scoreUs ?? 0;
-    const scoreThem = currentMatch?.scoreThem ?? 0;
+    if (!currentMatch) return;
 
-    const shareText = `🃏 Truco en vivo!\n${usNames}: ${scoreUs} pts\n${themNames}: ${scoreThem} pts`;
-    const shareUrl = window.location.href;
+    const usNames = currentMatch.teamUsNames?.join(' & ')
+      || currentMatch.teamUs.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ');
+    const themNames = currentMatch.teamThemNames?.join(' & ')
+      || currentMatch.teamThem.map(id => players.find(p => p.id === id)?.name || 'Jugador').join(' & ');
+
+    const liveUrl = `${window.location.origin}/match/${currentMatch.id}`;
+    const shareText = `🃏 Seguí el truco en vivo!\n${usNames} vs ${themNames}`;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: 'Truco Tracker - Partido en Vivo',
+          title: 'Truco en vivo',
           text: shareText,
-          url: shareUrl,
+          url: liveUrl,
         });
       } else {
-        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-        alert('¡Marcador copiado! Pegalo donde quieras.');
+        await navigator.clipboard.writeText(`${shareText}\n${liveUrl}`);
+        alert('¡Link copiado! Pegalo donde quieras.');
       }
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
