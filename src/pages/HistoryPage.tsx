@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale';
 import { Calendar, Users, ChevronDown, ChevronUp, Trash2, Edit2, X } from 'lucide-react';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { getSpanishCardAvatar } from '../utils/avatar';
 
 export default function HistoryPage() {
   const { matches, players } = useTrucoData();
@@ -15,6 +16,8 @@ export default function HistoryPage() {
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [editScoreUs, setEditScoreUs] = useState('');
   const [editScoreThem, setEditScoreThem] = useState('');
+  const [editTeamUs, setEditTeamUs] = useState<string[]>([]);
+  const [editTeamThem, setEditTeamThem] = useState<string[]>([]);
 
   const completedMatches = matches.filter(m => m.status === 'completed');
 
@@ -39,11 +42,16 @@ export default function HistoryPage() {
     const us = parseInt(editScoreUs, 10);
     const them = parseInt(editScoreThem, 10);
     if (isNaN(us) || isNaN(them)) return;
+    if (editTeamUs.length === 0 || editTeamThem.length === 0) return;
     
     try {
       await updateDoc(doc(db, 'matches', editingMatch.id), {
         scoreUs: us,
-        scoreThem: them
+        scoreThem: them,
+        teamUs: editTeamUs,
+        teamThem: editTeamThem,
+        teamUsNames: editTeamUs.map(id => players.find(p => p.id === id)?.name || 'Jugador'),
+        teamThemNames: editTeamThem.map(id => players.find(p => p.id === id)?.name || 'Jugador'),
       });
       setEditingMatch(null);
     } catch (error) {
@@ -56,6 +64,22 @@ export default function HistoryPage() {
     setEditingMatch(match);
     setEditScoreUs(match.scoreUs.toString());
     setEditScoreThem(match.scoreThem.toString());
+    setEditTeamUs(match.teamUs || []);
+    setEditTeamThem(match.teamThem || []);
+  };
+
+  const toggleEditPlayer = (team: 'Us' | 'Them', playerId: string) => {
+    if (team === 'Us') {
+      setEditTeamUs(prev =>
+        prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]
+      );
+      setEditTeamThem(prev => prev.filter(id => id !== playerId));
+    } else {
+      setEditTeamThem(prev =>
+        prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]
+      );
+      setEditTeamUs(prev => prev.filter(id => id !== playerId));
+    }
   };
 
   const years = useMemo(() => {
@@ -233,7 +257,7 @@ export default function HistoryPage() {
       {/* Edit Match Modal */}
       {editingMatch && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-zinc-900">Editar Partido</h3>
               <button onClick={() => setEditingMatch(null)} className="text-zinc-400 hover:text-zinc-600 transition-colors">
@@ -241,26 +265,101 @@ export default function HistoryPage() {
               </button>
             </div>
             
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 tracking-wider mb-1">Puntaje Nosotros</label>
-                <input
-                  type="number"
-                  value={editScoreUs}
-                  onChange={(e) => setEditScoreUs(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 font-medium text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 tracking-wider mb-1">Puntaje Ellos</label>
-                <input
-                  type="number"
-                  value={editScoreThem}
-                  onChange={(e) => setEditScoreThem(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 font-medium text-sm"
-                />
+            {/* Puntajes */}
+            <div className="space-y-3 mb-6">
+              <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Puntaje</p>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-bold text-blue-500 tracking-wider mb-1">Nosotros</label>
+                  <input
+                    type="number"
+                    value={editScoreUs}
+                    onChange={(e) => setEditScoreUs(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 font-medium text-sm text-center"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-bold text-red-500 tracking-wider mb-1">Ellos</label>
+                  <input
+                    type="number"
+                    value={editScoreThem}
+                    onChange={(e) => setEditScoreThem(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 font-medium text-sm text-center"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Equipos */}
+            {players.length > 0 && (
+              <div className="space-y-4 mb-6">
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Equipos</p>
+
+                {/* Equipo Nosotros */}
+                <div>
+                  <p className="text-xs font-bold text-blue-500 mb-2">Nosotros</p>
+                  <div className="flex flex-wrap gap-2">
+                    {players.map(p => {
+                      const inUs = editTeamUs.includes(p.id);
+                      const inThem = editTeamThem.includes(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => toggleEditPlayer('Us', p.id)}
+                          disabled={inThem}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                            inUs
+                              ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
+                              : inThem
+                              ? 'bg-zinc-100 text-zinc-300 border-zinc-200 cursor-not-allowed'
+                              : 'bg-white text-zinc-600 border-zinc-200 hover:border-blue-300'
+                          }`}
+                        >
+                          <img
+                            src={p.photoUrl || getSpanishCardAvatar(p.name)}
+                            className="w-4 h-4 rounded-full object-cover bg-white"
+                            alt=""
+                          />
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Equipo Ellos */}
+                <div>
+                  <p className="text-xs font-bold text-red-500 mb-2">Ellos</p>
+                  <div className="flex flex-wrap gap-2">
+                    {players.map(p => {
+                      const inThem = editTeamThem.includes(p.id);
+                      const inUs = editTeamUs.includes(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => toggleEditPlayer('Them', p.id)}
+                          disabled={inUs}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                            inThem
+                              ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                              : inUs
+                              ? 'bg-zinc-100 text-zinc-300 border-zinc-200 cursor-not-allowed'
+                              : 'bg-white text-zinc-600 border-zinc-200 hover:border-red-300'
+                          }`}
+                        >
+                          <img
+                            src={p.photoUrl || getSpanishCardAvatar(p.name)}
+                            className="w-4 h-4 rounded-full object-cover bg-white"
+                            alt=""
+                          />
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -271,7 +370,8 @@ export default function HistoryPage() {
               </button>
               <button
                 onClick={handleEdit}
-                className="flex-1 py-2.5 bg-zinc-900 text-white rounded-lg font-bold text-sm hover:bg-zinc-800 transition-colors"
+                disabled={editTeamUs.length === 0 || editTeamThem.length === 0}
+                className="flex-1 py-2.5 bg-zinc-900 text-white rounded-lg font-bold text-sm hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Guardar
               </button>
