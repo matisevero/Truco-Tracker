@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from '../firebase';
 import { useTrucoData, Match, Player, PointEvent } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
@@ -31,13 +31,20 @@ export default function MatchPage() {
   const TAP_DELAY = 800; // ms de pausa antes de confirmar
   
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showBuenas, setShowBuenas] = useState<'Us' | 'Them' | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('trucoOnboardingSeen'));
+  const prevScoreUs = useRef(0);
+  const prevScoreThem = useRef(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
       setIsFullscreen(true);
+      try { await (screen.orientation as any).lock('landscape'); } catch (_) {}
     } else {
+      try { (screen.orientation as any).unlock(); } catch (_) {}
       await document.exitFullscreen();
       setIsFullscreen(false);
     }
@@ -48,6 +55,38 @@ export default function MatchPage() {
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
+
+  // Cronómetro — actualiza cada segundo mientras hay partido en curso
+  useEffect(() => {
+    if (!currentMatch) { setElapsedSeconds(0); return; }
+    const startTime = currentMatch.startedAt?.toDate?.()?.getTime() ?? Date.now();
+    const tick = () => setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [currentMatch?.id]);
+
+  // Animación de "¡Buenas!" cuando algún equipo llega a 15
+  useEffect(() => {
+    if (!currentMatch) return;
+    const crossedUs = prevScoreUs.current < 15 && currentMatch.scoreUs >= 15;
+    const crossedThem = prevScoreThem.current < 15 && currentMatch.scoreThem >= 15;
+    if (crossedUs) { setShowBuenas('Us'); setTimeout(() => setShowBuenas(null), 2500); }
+    if (crossedThem) { setShowBuenas('Them'); setTimeout(() => setShowBuenas(null), 2500); }
+    prevScoreUs.current = currentMatch.scoreUs;
+    prevScoreThem.current = currentMatch.scoreThem;
+  }, [currentMatch?.scoreUs, currentMatch?.scoreThem]);
+
+  // Confirmación antes de cerrar el browser con partido en curso
+  useEffect(() => {
+    if (!currentMatch) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentMatch?.id]);
 
   const [showGuestWarning, setShowGuestWarning] = useState(() => {
     // Only show once per session if they are anonymous
@@ -135,6 +174,7 @@ export default function MatchPage() {
     try {
       await addDoc(collection(db, 'matches'), {
         date: serverTimestamp(),
+        startedAt: serverTimestamp(),
         teamUs: teamUsSelection,
         teamThem: teamThemSelection,
         // Nombres denormalizados para la vista pública sin auth
@@ -159,6 +199,8 @@ export default function MatchPage() {
     let newHistory = [...(currentMatch.pointHistory || [])];
 
     if (change > 0) {
+      // Vibración táctil al sumar puntos
+      if (navigator.vibrate) navigator.vibrate(80);
       // Suma: agregar nuevo evento al historial
       const newEvent: PointEvent = {
         id: Math.random().toString(36).substring(7),
@@ -224,9 +266,12 @@ export default function MatchPage() {
 
   const finishMatch = async () => {
     if (!currentMatch) return;
+    const startTime = currentMatch.startedAt?.toDate?.()?.getTime() ?? Date.now();
+    const durationMs = Date.now() - startTime;
     try {
       await updateDoc(doc(db, 'matches', currentMatch.id), {
-        status: 'completed'
+        status: 'completed',
+        durationMs
       });
       setTeamUsSelection([]);
       setTeamThemSelection([]);
@@ -347,6 +392,12 @@ export default function MatchPage() {
         console.error('Error sharing:', error);
       }
     }
+  };
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const ss = (s % 60).toString().padStart(2, '0');
+    return `${m}:${ss}`;
   };
 
   if (!currentMatch) {
@@ -605,7 +656,12 @@ export default function MatchPage() {
     <div className="space-y-6 animate-in fade-in duration-500 pb-32">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-pulperia-red font-serif">Partido en Curso</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-pulperia-red font-serif">Partido en Curso</h1>
+            <span className="text-sm font-mono font-bold text-pulperia-ink/40 bg-pulperia-card border border-pulperia-border px-2 py-0.5 rounded-lg">
+              {formatTime(elapsedSeconds)}
+            </span>
+          </div>
           <p className="text-pulperia-ink/70 text-sm mt-1 font-serif italic">
             {isOwner ? 'El primero en llegar a 30 gana.' : 'Estás viendo este partido en vivo.'}
           </p>
@@ -650,6 +706,21 @@ export default function MatchPage() {
       {isPicaPica && (
         <div className="bg-amber-100 border border-amber-300 text-amber-900 px-4 py-2 rounded-xl text-center font-bold text-sm uppercase tracking-widest animate-pulse shadow-sm fileteado-border">
           ¡Pica Pica!
+        </div>
+      )}
+
+      {/* Animación ¡Buenas! cuando un equipo llega a 15 */}
+      {showBuenas && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="animate-in zoom-in-50 fade-in duration-300 text-center">
+            <div className="bg-pulperia-gold/95 text-white px-10 py-6 rounded-3xl shadow-2xl border-4 border-white/30">
+              <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-80">
+                {showBuenas === 'Us' ? 'Nosotros' : 'Ellos'}
+              </p>
+              <p className="text-5xl font-black font-serif">¡Buenas!</p>
+              <p className="text-sm font-serif italic mt-1 opacity-80">Pasaron los 15 puntos</p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1008,6 +1079,41 @@ export default function MatchPage() {
                 Entendido
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding de primer uso */}
+      {showOnboarding && !currentMatch && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-in fade-in">
+          <div className="card-espanola p-6 max-w-sm w-full shadow-xl">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">🃏</div>
+              <h3 className="text-2xl font-black text-pulperia-red font-serif">¡Bienvenido al Truco!</h3>
+              <p className="text-pulperia-ink/60 text-sm font-serif italic mt-1">Así es cómo funciona el marcador</p>
+            </div>
+            <div className="space-y-3 mb-6">
+              {[
+                { icon: '👆', title: 'Tocá el número grande', desc: 'Cada toque suma 1 punto. Tocá varias veces rápido para acumular.' },
+                { icon: '🎯', title: 'Usá los botones de abajo', desc: 'Para sumar Envido, Truco, Real Envido, etc. con el valor exacto.' },
+                { icon: '↩️', title: 'Deshacé el último punto', desc: 'Si te equivocás, usá "Deshacer último" en el historial.' },
+                { icon: '📱', title: 'Modo pantalla completa', desc: 'Tocá el ícono ⛶ para esconder el browser y ver solo el marcador.' },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} className="flex gap-3 items-start">
+                  <span className="text-xl shrink-0">{icon}</span>
+                  <div>
+                    <p className="text-sm font-bold text-pulperia-ink">{title}</p>
+                    <p className="text-xs text-pulperia-ink/60 font-serif">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { localStorage.setItem('trucoOnboardingSeen', '1'); setShowOnboarding(false); }}
+              className="w-full py-3 bg-pulperia-red text-white rounded-xl font-bold hover:bg-red-800 transition-colors shadow-sm"
+            >
+              ¡Entendido, a jugar!
+            </button>
           </div>
         </div>
       )}
