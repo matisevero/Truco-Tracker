@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTrucoData } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
@@ -38,6 +39,18 @@ export default function StatsPage() {
 
   const [hideWon, setHideWon] = useState(false);
   const [hideLost, setHideLost] = useState(false);
+  const [h2pA, setH2pA] = useState<string>('');
+  const [h2pB, setH2pB] = useState<string>('');
+  const [searchParams] = useSearchParams();
+
+  // Leer query param ?h2h=id1,id2,... desde el historial
+  useEffect(() => {
+    const h2h = searchParams.get('h2h');
+    if (h2h && players.length > 0) {
+      const ids = h2h.split(',');
+      if (ids.length >= 2) { setH2pA(ids[0]); setH2pB(ids[1]); }
+    }
+  }, [searchParams, players]);
 
   const handleLegendClick = (e: any) => {
     if (e.dataKey === 'A' || e.dataKey === 'hiddenA') setHideWon(prev => !prev);
@@ -191,6 +204,40 @@ export default function StatsPage() {
       };
     }).filter(d => d.A + d.B > 0); // Only players with matches
 
+    // Peor racha (derrotas consecutivas)
+    const playerLossStreaks: Record<string, { current: number, max: number }> = {};
+    players.forEach(p => playerLossStreaks[p.id] = { current: 0, max: 0 });
+    [...completed].reverse().forEach(m => {
+      const usWon = m.scoreUs > m.scoreThem;
+      m.teamUs.forEach(id => {
+        if (!playerLossStreaks[id]) return;
+        if (!usWon) { playerLossStreaks[id].current++; playerLossStreaks[id].max = Math.max(playerLossStreaks[id].max, playerLossStreaks[id].current); }
+        else playerLossStreaks[id].current = 0;
+      });
+      m.teamThem.forEach(id => {
+        if (!playerLossStreaks[id]) return;
+        if (usWon) { playerLossStreaks[id].current++; playerLossStreaks[id].max = Math.max(playerLossStreaks[id].max, playerLossStreaks[id].current); }
+        else playerLossStreaks[id].current = 0;
+      });
+    });
+    let worstStreakPlayer = { name: '-', streak: 0, photoUrl: '' };
+    Object.entries(playerLossStreaks).forEach(([id, s]) => {
+      if (s.max > worstStreakPlayer.streak) {
+        const p = players.find(pl => pl.id === id);
+        if (p) worstStreakPlayer = { name: p.name, streak: s.max, photoUrl: p.photoUrl || '' };
+      }
+    });
+
+    // Puntaje promedio por partido
+    const avgScoreUs = completed.length ? (completed.reduce((a, m) => a + m.scoreUs, 0) / completed.length).toFixed(1) : '0';
+    const avgScoreThem = completed.length ? (completed.reduce((a, m) => a + m.scoreThem, 0) / completed.length).toFixed(1) : '0';
+
+    // Duración promedio
+    const matchesWithDuration = completed.filter(m => m.durationMs && m.durationMs > 0);
+    const avgDurationMin = matchesWithDuration.length
+      ? Math.round(matchesWithDuration.reduce((a, m) => a + (m.durationMs || 0), 0) / matchesWithDuration.length / 60000)
+      : null;
+
     return {
       totalPlayed: completed.length,
       totalPointsPlayed,
@@ -199,10 +246,42 @@ export default function StatsPage() {
       mostActivePlayer,
       mostLostPlayer,
       highestStreakPlayer,
+      worstStreakPlayer,
       topTeam,
-      radarData
+      radarData,
+      avgScoreUs,
+      avgScoreThem,
+      avgDurationMin
     };
   }, [matches, players]);
+
+  // H2H entre dos jugadores seleccionados
+  const h2hStats = useMemo(() => {
+    if (!h2pA || !h2pB) return null;
+    const completed = matches.filter(m => m.status === 'completed');
+    let together = { played: 0, won: 0 };
+    let against = { played: 0, aWon: 0, bWon: 0 };
+    completed.forEach(m => {
+      const aInUs = m.teamUs.includes(h2pA), aInThem = m.teamThem.includes(h2pA);
+      const bInUs = m.teamUs.includes(h2pB), bInThem = m.teamThem.includes(h2pB);
+      const usWon = m.scoreUs > m.scoreThem;
+      // Juntos (mismo equipo)
+      if ((aInUs && bInUs) || (aInThem && bInThem)) {
+        together.played++;
+        if ((aInUs && usWon) || (aInThem && !usWon)) together.won++;
+      }
+      // Enfrentados (equipos distintos)
+      if ((aInUs && bInThem) || (aInThem && bInUs)) {
+        against.played++;
+        if ((aInUs && usWon) || (aInThem && !usWon)) against.aWon++;
+        else against.bWon++;
+      }
+    });
+    return { together, against };
+  }, [matches, h2pA, h2pB]);
+
+  const playerA = players.find(p => p.id === h2pA);
+  const playerB = players.find(p => p.id === h2pB);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
@@ -211,7 +290,7 @@ export default function StatsPage() {
         <p className="text-pulperia-blue/70 text-sm mt-4 font-medium">Resumen de todos los partidos jugados en la pulpería.</p>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="card-espanola p-5 text-center">
           <p className="text-xs font-bold text-pulperia-blue/70 tracking-wider mb-1">Partidos Jugados</p>
           <p className="text-3xl font-black text-pulperia-red">{stats.totalPlayed}</p>
@@ -220,6 +299,12 @@ export default function StatsPage() {
           <p className="text-xs font-bold text-pulperia-blue/70 tracking-wider mb-1">Puntos Jugados</p>
           <p className="text-3xl font-black text-pulperia-red">{stats.totalPointsPlayed}</p>
         </div>
+        {stats.avgDurationMin !== null && (
+          <div className="card-espanola p-5 text-center">
+            <p className="text-xs font-bold text-pulperia-blue/70 tracking-wider mb-1">Duración Promedio</p>
+            <p className="text-3xl font-black text-pulperia-red">{stats.avgDurationMin}<span className="text-lg">min</span></p>
+          </div>
+        )}
         <div className="card-espanola p-5 text-center">
           <p className="text-xs font-bold text-pulperia-blue/70 tracking-wider mb-1">Mejor Jugador</p>
           <p className="text-xl font-bold text-pulperia-blue truncate">{stats.topPlayer.name}</p>
@@ -229,6 +314,11 @@ export default function StatsPage() {
           <p className="text-xs font-bold text-pulperia-blue/70 tracking-wider mb-1">Mejor Equipo</p>
           <p className="text-sm font-bold text-pulperia-blue truncate">{stats.topTeam.name}</p>
           <p className="text-xs text-pulperia-gold font-bold mt-1">{stats.topTeam.winRate.toFixed(1)}% Vic ({stats.topTeam.played} PJ)</p>
+        </div>
+        <div className="card-espanola p-5 text-center">
+          <p className="text-xs font-bold text-pulperia-blue/70 tracking-wider mb-1">Puntaje Promedio</p>
+          <p className="text-lg font-black text-pulperia-blue">{stats.avgScoreUs} <span className="text-pulperia-ink/30">vs</span> {stats.avgScoreThem}</p>
+          <p className="text-[10px] text-pulperia-ink/40 font-bold mt-1">Nosotros vs Ellos</p>
         </div>
       </div>
 
@@ -276,10 +366,10 @@ export default function StatsPage() {
         <h2 className="text-lg font-bold text-pulperia-red mb-6 flex items-center justify-center gap-2 fileteado-border py-1">
           <Trophy className="text-pulperia-gold" size={24} /> Logros y Medallas
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <MedalCard 
             title="El Invencible" 
-            desc="Mayor % de victorias (min 3 PJ)" 
+            desc="Mayor % victorias (min 3 PJ)" 
             player={stats.topPlayer} 
             value={`${stats.topPlayer.winRate.toFixed(1)}%`} 
             icon={<Trophy size={20} className="text-pulperia-gold" />} 
@@ -298,7 +388,84 @@ export default function StatsPage() {
             value={`${stats.mostLostPlayer.lost} perdidos`} 
             icon={<Skull size={20} className="text-pulperia-blue" />} 
           />
+          <MedalCard 
+            title="El Cagón" 
+            desc="Peor racha de derrotas" 
+            player={stats.worstStreakPlayer} 
+            value={`${stats.worstStreakPlayer.streak} seguidas`} 
+            icon={<span className="text-xl">😬</span>} 
+          />
         </div>
+      </div>
+
+      {/* Head-to-Head */}
+      <div className="card-espanola p-5">
+        <h2 className="text-lg font-bold text-pulperia-red mb-4 flex items-center justify-center gap-2 fileteado-border py-1">
+          ⚔️ Head-to-Head
+        </h2>
+        <div className="flex gap-3 mb-6">
+          <select
+            value={h2pA}
+            onChange={e => setH2pA(e.target.value)}
+            className="flex-1 px-3 py-2 bg-pulperia-bg border border-pulperia-border rounded-xl text-sm font-bold text-pulperia-ink focus:outline-none focus:border-pulperia-blue"
+          >
+            <option value="">Jugador A</option>
+            {players.filter(p => p.id !== h2pB).map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <span className="flex items-center font-black text-pulperia-ink/30 text-lg">vs</span>
+          <select
+            value={h2pB}
+            onChange={e => setH2pB(e.target.value)}
+            className="flex-1 px-3 py-2 bg-pulperia-bg border border-pulperia-border rounded-xl text-sm font-bold text-pulperia-ink focus:outline-none focus:border-pulperia-red"
+          >
+            <option value="">Jugador B</option>
+            {players.filter(p => p.id !== h2pA).map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {h2hStats && playerA && playerB ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-pulperia-bg rounded-2xl p-4 text-center border border-pulperia-border">
+              <p className="text-xs font-bold text-pulperia-ink/50 uppercase tracking-wider mb-2">Jugando Juntos</p>
+              <p className="text-3xl font-black text-pulperia-blue">{h2hStats.together.played}</p>
+              <p className="text-xs text-pulperia-ink/50 mb-3">partidos</p>
+              <div className="flex justify-center gap-3 text-sm">
+                <span className="font-bold text-green-600">✓ {h2hStats.together.won}</span>
+                <span className="text-pulperia-ink/30">·</span>
+                <span className="font-bold text-red-500">✗ {h2hStats.together.played - h2hStats.together.won}</span>
+              </div>
+              {h2hStats.together.played > 0 && (
+                <p className="text-xs text-pulperia-gold font-bold mt-2">
+                  {((h2hStats.together.won / h2hStats.together.played) * 100).toFixed(0)}% victorias
+                </p>
+              )}
+            </div>
+            <div className="bg-pulperia-bg rounded-2xl p-4 text-center border border-pulperia-border">
+              <p className="text-xs font-bold text-pulperia-ink/50 uppercase tracking-wider mb-2">Enfrentados</p>
+              <p className="text-3xl font-black text-pulperia-red">{h2hStats.against.played}</p>
+              <p className="text-xs text-pulperia-ink/50 mb-3">partidos</p>
+              <div className="flex justify-between text-xs px-2">
+                <div className="text-center">
+                  <p className="font-black text-pulperia-blue text-lg">{h2hStats.against.aWon}</p>
+                  <p className="text-pulperia-ink/50 font-bold truncate max-w-[60px]">{playerA.name}</p>
+                </div>
+                <span className="text-pulperia-ink/20 font-black self-center">-</span>
+                <div className="text-center">
+                  <p className="font-black text-pulperia-red text-lg">{h2hStats.against.bWon}</p>
+                  <p className="text-pulperia-ink/50 font-bold truncate max-w-[60px]">{playerB.name}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-center text-pulperia-ink/40 font-serif italic text-sm py-4">
+            Seleccioná dos jugadores para ver su historial.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

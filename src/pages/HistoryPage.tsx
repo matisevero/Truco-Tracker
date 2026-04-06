@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTrucoData, Match } from '../hooks/useTrucoData';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, Users, ChevronDown, ChevronUp, Trash2, Edit2, X } from 'lucide-react';
@@ -10,6 +11,8 @@ import { getSpanishCardAvatar } from '../utils/avatar';
 export default function HistoryPage() {
   const { matches, players } = useTrucoData();
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [filterPlayerId, setFilterPlayerId] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
   
   const [deletingMatch, setDeletingMatch] = useState<string | null>(null);
@@ -94,13 +97,16 @@ export default function HistoryPage() {
   }, [completedMatches]);
 
   const filteredMatches = useMemo(() => {
-    if (selectedYear === 'all') return completedMatches;
     return completedMatches.filter(m => {
-      if (!m.date) return false;
-      const date = m.date.toDate ? m.date.toDate() : new Date(m.date);
-      return date.getFullYear() === selectedYear;
+      const yearOk = selectedYear === 'all' || (() => {
+        if (!m.date) return false;
+        const date = m.date.toDate ? m.date.toDate() : new Date(m.date);
+        return date.getFullYear() === selectedYear;
+      })();
+      const playerOk = !filterPlayerId || [...m.teamUs, ...m.teamThem].includes(filterPlayerId);
+      return yearOk && playerOk;
     });
-  }, [completedMatches, selectedYear]);
+  }, [completedMatches, selectedYear, filterPlayerId]);
 
   const getPlayerNames = (ids: string[]) => {
     return ids.map(id => players.find(p => p.id === id)?.name || 'Desconocido').join(', ');
@@ -142,6 +148,32 @@ export default function HistoryPage() {
           </div>
         )}
       </header>
+
+      {/* Filtro por jugador */}
+      {players.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 flex-wrap">
+          <button
+            onClick={() => setFilterPlayerId(null)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+              !filterPlayerId ? 'bg-pulperia-red text-white' : 'bg-pulperia-card border border-pulperia-border text-pulperia-ink/60 hover:bg-pulperia-bg'
+            }`}
+          >
+            Todos los jugadores
+          </button>
+          {players.map(p => (
+            <button
+              key={p.id}
+              onClick={() => setFilterPlayerId(prev => prev === p.id ? null : p.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${
+                filterPlayerId === p.id ? 'bg-pulperia-blue text-white' : 'bg-pulperia-card border border-pulperia-border text-pulperia-ink/60 hover:bg-pulperia-bg'
+              }`}
+            >
+              <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-4 h-4 rounded-full object-cover" alt="" />
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {filteredMatches.map(match => {
@@ -199,13 +231,26 @@ export default function HistoryPage() {
                       <p className="font-medium text-zinc-700">{getPlayerNames(match.teamThem)}</p>
                     </div>
                   </div>
-                  <div className="flex justify-center gap-3 pt-2 border-t border-zinc-200/50">
+                  <div className="flex justify-center gap-2 pt-2 border-t border-zinc-200/50 flex-wrap">
                     <button 
                       onClick={(e) => openEditModal(match, e)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-200 text-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-300 transition-colors"
                     >
                       <Edit2 size={14} /> Editar
                     </button>
+                    {match.teamUs.length > 0 && match.teamThem.length > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const allIds = [...match.teamUs, ...match.teamThem];
+                          navigate(`/stats?h2h=${allIds.join(',')}`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-pulperia-gold/20 text-pulperia-gold rounded-lg text-xs font-bold hover:bg-pulperia-gold/30 transition-colors border border-pulperia-gold/30"
+                        style={{ color: '#b8960c' }}
+                      >
+                        ⚔️ Head-to-Head
+                      </button>
+                    )}
                     <button 
                       onClick={(e) => { e.stopPropagation(); setDeletingMatch(match.id); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-200 transition-colors"
