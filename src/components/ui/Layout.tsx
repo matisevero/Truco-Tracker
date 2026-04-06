@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { BarChart2, Users, History, LogOut, Settings } from 'lucide-react';
+import { BarChart2, Users, History, LogOut, Settings, Menu, X } from 'lucide-react';
+import { useState } from 'react';
 import { signInWithGoogle, logOut, signInAsGuest } from '../../firebase';
 import { useAuthState } from '../../hooks/useAuthState';
 
@@ -58,6 +59,8 @@ const CardPattern = () => (
 export default function Layout() {
   const { user, loading } = useAuthState();
   const location = useLocation();
+  const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const isMatchPage = location.pathname === '/';
 
   if (loading) {
     return (
@@ -197,25 +200,68 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-pulperia-bg flex flex-col md:flex-row">
-      {/* Mobile Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-pulperia-card border-t border-pulperia-border z-50 flex justify-around p-2 pb-safe shadow-[0_-4px_12px_rgba(44,42,41,0.05)]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-                isActive ? 'text-pulperia-red' : 'text-pulperia-ink/40'
-              }`}
-            >
-              <Icon size={24} />
-              <span className="text-[10px] mt-1 font-bold">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Mobile Nav — se oculta durante el partido y se reemplaza por botón flotante */}
+      {!isMatchPage && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-pulperia-card border-t border-pulperia-border z-50 flex justify-around p-2 pb-safe shadow-[0_-4px_12px_rgba(44,42,41,0.05)]">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+                  isActive ? 'text-pulperia-red' : 'text-pulperia-ink/40'
+                }`}
+              >
+                <Icon size={24} />
+                <span className="text-[10px] mt-1 font-bold">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* Botón flotante de menú — solo visible durante el partido en mobile */}
+      {isMatchPage && (
+        <div className="md:hidden fixed bottom-6 right-4 z-50">
+          {floatingMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setFloatingMenuOpen(false)}
+              />
+              <div className="absolute bottom-14 right-0 bg-pulperia-card border border-pulperia-border rounded-2xl shadow-xl overflow-hidden z-50 w-44 animate-in slide-in-from-bottom-2 fade-in duration-150">
+                {navItems.filter(item => item.path !== '/').map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setFloatingMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                        isActive
+                          ? 'text-pulperia-red font-bold bg-pulperia-red/5'
+                          : 'text-pulperia-ink/70 hover:bg-pulperia-bg'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span className="text-sm font-semibold font-serif">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setFloatingMenuOpen(prev => !prev)}
+            className="w-12 h-12 bg-pulperia-ink text-white rounded-full shadow-xl flex items-center justify-center transition-transform active:scale-95"
+          >
+            {floatingMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      )}
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-pulperia-card border-r border-pulperia-border fixed h-full shadow-lg">
