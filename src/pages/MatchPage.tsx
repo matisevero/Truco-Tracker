@@ -3,12 +3,17 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from '
 import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from '../firebase';
 import { useTrucoData, Match, Player, PointEvent } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
-import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag } from 'lucide-react';
+import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag, Search } from 'lucide-react';
 
 export default function MatchPage() {
   const { players, matches } = useTrucoData();
   const [teamUsSelection, setTeamUsSelection] = useState<string[]>([]);
   const [teamThemSelection, setTeamThemSelection] = useState<string[]>([]);
+
+  const [searchUs, setSearchUs] = useState('');
+  const [searchThem, setSearchThem] = useState('');
+  const [dropdownUs, setDropdownUs] = useState(false);
+  const [dropdownThem, setDropdownThem] = useState(false);
 
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmingAbandon, setIsConfirmingAbandon] = useState(false);
@@ -76,11 +81,7 @@ export default function MatchPage() {
     };
   }, [currentMatch]);
 
-  useEffect(() => {
-    if (historyEndRef.current) {
-      historyEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [currentMatch?.pointHistory]);
+  // Scroll automático eliminado — era molesto durante el juego
 
   // Toca el número grande → acumula y después de TAP_DELAY ms confirma
   const tapScore = (team: 'Us' | 'Them') => {
@@ -131,13 +132,14 @@ export default function MatchPage() {
 
   const updateScore = async (team: 'Us' | 'Them', change: number, reason: string = 'Puntos') => {
     if (!currentMatch) return;
-    const newScore = team === 'Us' 
+    const newScore = team === 'Us'
       ? Math.max(0, Math.min(30, currentMatch.scoreUs + change))
       : Math.max(0, Math.min(30, currentMatch.scoreThem + change));
 
-    // Only add to history if it's a positive point addition
-    let newHistory = currentMatch.pointHistory || [];
+    let newHistory = [...(currentMatch.pointHistory || [])];
+
     if (change > 0) {
+      // Suma: agregar nuevo evento al historial
       const newEvent: PointEvent = {
         id: Math.random().toString(36).substring(7),
         team,
@@ -146,6 +148,26 @@ export default function MatchPage() {
         timestamp: Date.now()
       };
       newHistory = [...newHistory, newEvent];
+    } else if (change === -1) {
+      // Resta manual (-1): modificar el ultimo evento de ese equipo en el historial
+      const teamEvents = newHistory
+        .map((e, i) => ({ e, i }))
+        .filter(({ e }) => e.team === team);
+      const lastIdx = teamEvents[teamEvents.length - 1];
+
+      if (lastIdx !== undefined) {
+        if (lastIdx.e.points > 1) {
+          // Reducir en 1 y marcar como generico
+          newHistory[lastIdx.i] = {
+            ...lastIdx.e,
+            points: lastIdx.e.points - 1,
+            reason: 'Punto',
+          };
+        } else {
+          // Era 1 punto, eliminar la entrada entera
+          newHistory.splice(lastIdx.i, 1);
+        }
+      }
     }
 
     try {
@@ -316,48 +338,155 @@ export default function MatchPage() {
         </header>
 
         <div className="grid md:grid-cols-2 gap-4">
+          {/* Equipo Nosotros */}
           <div className="card-espanola p-5">
             <h2 className="text-xl font-bold text-pulperia-ink mb-3 flex items-center gap-2 font-serif">
               <Users className="text-pulperia-blue" size={20} /> Nosotros
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {players.filter(p => !teamThemSelection.includes(p.id)).map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => togglePlayer('Us', p.id)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${
-                    teamUsSelection.includes(p.id)
-                      ? 'bg-pulperia-blue text-white shadow-sm'
-                      : 'bg-pulperia-bg text-pulperia-ink/70 hover:bg-pulperia-border border border-pulperia-border'
-                  }`}
-                >
-                  <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-5 h-5 rounded-full object-cover bg-white" alt="" />
-                  {p.name}
-                </button>
-              ))}
-              {players.length === 0 && <p className="text-sm text-pulperia-ink/40 font-serif italic">No hay jugadores. Añade en la pestaña Jugadores.</p>}
+
+            {/* Chips de seleccionados */}
+            {teamUsSelection.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {teamUsSelection.map(id => {
+                  const p = players.find(p => p.id === id);
+                  if (!p) return null;
+                  return (
+                    <span key={id} className="flex items-center gap-1.5 px-2.5 py-1 bg-pulperia-blue text-white rounded-full text-xs font-bold shadow-sm">
+                      <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-4 h-4 rounded-full object-cover bg-white/20" alt="" />
+                      {p.name}
+                      <button onClick={() => togglePlayer('Us', id)} className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Input de búsqueda */}
+            <div className="relative">
+              <div className="flex items-center gap-2 px-3 py-2 bg-pulperia-bg border border-pulperia-border rounded-xl focus-within:border-pulperia-blue transition-colors">
+                <Search size={14} className="text-pulperia-ink/40 shrink-0" />
+                <input
+                  type="text"
+                  value={searchUs}
+                  onChange={e => { setSearchUs(e.target.value); setDropdownUs(true); }}
+                  onFocus={() => setDropdownUs(true)}
+                  onBlur={() => setTimeout(() => setDropdownUs(false), 150)}
+                  placeholder="Buscar jugador..."
+                  className="flex-1 bg-transparent text-sm text-pulperia-ink placeholder:text-pulperia-ink/30 outline-none font-serif"
+                />
+              </div>
+
+              {dropdownUs && (
+                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-pulperia-card border border-pulperia-border rounded-xl shadow-lg overflow-hidden">
+                  {players
+                    .filter(p =>
+                      !teamUsSelection.includes(p.id) &&
+                      !teamThemSelection.includes(p.id) &&
+                      p.name.toLowerCase().includes(searchUs.toLowerCase())
+                    )
+                    .slice(0, 6)
+                    .map(p => (
+                      <button
+                        key={p.id}
+                        onMouseDown={() => { togglePlayer('Us', p.id); setSearchUs(''); setDropdownUs(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-pulperia-bg transition-colors text-left"
+                      >
+                        <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-7 h-7 rounded-full object-cover border border-pulperia-border" alt="" />
+                        <span className="text-sm font-bold text-pulperia-ink font-serif">{p.name}</span>
+                      </button>
+                    ))
+                  }
+                  {players.filter(p =>
+                    !teamUsSelection.includes(p.id) &&
+                    !teamThemSelection.includes(p.id) &&
+                    p.name.toLowerCase().includes(searchUs.toLowerCase())
+                  ).length === 0 && (
+                    <p className="text-xs text-pulperia-ink/40 text-center py-3 italic font-serif">
+                      {searchUs ? 'Sin resultados' : 'Todos los jugadores ya fueron asignados'}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {players.length === 0 && (
+              <p className="text-sm text-pulperia-ink/40 font-serif italic mt-2">No hay jugadores. Añade en la pestaña Jugadores.</p>
+            )}
           </div>
 
+          {/* Equipo Ellos */}
           <div className="card-espanola p-5">
             <h2 className="text-xl font-bold text-pulperia-ink mb-3 flex items-center gap-2 font-serif">
               <Users className="text-pulperia-red" size={20} /> Ellos
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {players.filter(p => !teamUsSelection.includes(p.id)).map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => togglePlayer('Them', p.id)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${
-                    teamThemSelection.includes(p.id)
-                      ? 'bg-pulperia-red text-white shadow-sm'
-                      : 'bg-pulperia-bg text-pulperia-ink/70 hover:bg-pulperia-border border border-pulperia-border'
-                  }`}
-                >
-                  <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-5 h-5 rounded-full object-cover bg-white" alt="" />
-                  {p.name}
-                </button>
-              ))}
+
+            {/* Chips de seleccionados */}
+            {teamThemSelection.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {teamThemSelection.map(id => {
+                  const p = players.find(p => p.id === id);
+                  if (!p) return null;
+                  return (
+                    <span key={id} className="flex items-center gap-1.5 px-2.5 py-1 bg-pulperia-red text-white rounded-full text-xs font-bold shadow-sm">
+                      <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-4 h-4 rounded-full object-cover bg-white/20" alt="" />
+                      {p.name}
+                      <button onClick={() => togglePlayer('Them', id)} className="ml-0.5 opacity-70 hover:opacity-100 transition-opacity">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Input de búsqueda */}
+            <div className="relative">
+              <div className="flex items-center gap-2 px-3 py-2 bg-pulperia-bg border border-pulperia-border rounded-xl focus-within:border-pulperia-red transition-colors">
+                <Search size={14} className="text-pulperia-ink/40 shrink-0" />
+                <input
+                  type="text"
+                  value={searchThem}
+                  onChange={e => { setSearchThem(e.target.value); setDropdownThem(true); }}
+                  onFocus={() => setDropdownThem(true)}
+                  onBlur={() => setTimeout(() => setDropdownThem(false), 150)}
+                  placeholder="Buscar jugador..."
+                  className="flex-1 bg-transparent text-sm text-pulperia-ink placeholder:text-pulperia-ink/30 outline-none font-serif"
+                />
+              </div>
+
+              {dropdownThem && (
+                <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-pulperia-card border border-pulperia-border rounded-xl shadow-lg overflow-hidden">
+                  {players
+                    .filter(p =>
+                      !teamThemSelection.includes(p.id) &&
+                      !teamUsSelection.includes(p.id) &&
+                      p.name.toLowerCase().includes(searchThem.toLowerCase())
+                    )
+                    .slice(0, 6)
+                    .map(p => (
+                      <button
+                        key={p.id}
+                        onMouseDown={() => { togglePlayer('Them', p.id); setSearchThem(''); setDropdownThem(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-pulperia-bg transition-colors text-left"
+                      >
+                        <img src={p.photoUrl || getSpanishCardAvatar(p.name)} className="w-7 h-7 rounded-full object-cover border border-pulperia-border" alt="" />
+                        <span className="text-sm font-bold text-pulperia-ink font-serif">{p.name}</span>
+                      </button>
+                    ))
+                  }
+                  {players.filter(p =>
+                    !teamThemSelection.includes(p.id) &&
+                    !teamUsSelection.includes(p.id) &&
+                    p.name.toLowerCase().includes(searchThem.toLowerCase())
+                  ).length === 0 && (
+                    <p className="text-xs text-pulperia-ink/40 text-center py-3 italic font-serif">
+                      {searchThem ? 'Sin resultados' : 'Todos los jugadores ya fueron asignados'}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
