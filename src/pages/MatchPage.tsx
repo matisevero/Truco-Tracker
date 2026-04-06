@@ -3,7 +3,8 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from '
 import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from '../firebase';
 import { useTrucoData, Match, Player, PointEvent } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
-import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag, Search } from 'lucide-react';
+import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag, Search, Menu } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function MatchPage() {
   const { players, matches } = useTrucoData();
@@ -29,6 +30,8 @@ export default function MatchPage() {
   const tapTimerThem = useRef<any>(null);
   const TAP_DELAY = 800; // ms de pausa antes de confirmar
   
+  const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+
   const [showGuestWarning, setShowGuestWarning] = useState(() => {
     // Only show once per session if they are anonymous
     const hasSeenWarning = sessionStorage.getItem('guestWarningSeen');
@@ -863,16 +866,49 @@ export default function MatchPage() {
         </div>
       )}
 
-      <div className="fixed bottom-20 md:bottom-6 left-0 right-0 md:left-64 z-40 px-4">
-        <div className="max-w-3xl mx-auto">
+      {/* Barra inferior: Finalizar + menú flotante — solo durante el partido */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 px-4 pb-4 pt-2 bg-gradient-to-t from-pulperia-bg via-pulperia-bg to-transparent">
+        <div className="max-w-3xl mx-auto flex gap-2">
           {isOwner && (
             <button
               onClick={() => setIsConfirming(true)}
-              className="w-full py-4 bg-pulperia-ink text-white rounded-2xl font-bold text-base hover:bg-zinc-800 transition-all shadow-xl flex items-center justify-center gap-2 border border-pulperia-border"
+              className="flex-1 py-4 bg-pulperia-ink text-white rounded-2xl font-bold text-base hover:bg-zinc-800 transition-all shadow-xl flex items-center justify-center gap-2 border border-pulperia-border"
             >
               <Check size={20} /> Finalizar Partido
             </button>
           )}
+
+          {/* Botón de menú — abre las otras secciones sin salir del partido */}
+          <div className="relative md:hidden">
+            {floatingMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFloatingMenuOpen(false)} />
+                <div className="absolute bottom-full mb-2 right-0 bg-pulperia-card border border-pulperia-border rounded-2xl shadow-xl overflow-hidden z-50 w-48 animate-in slide-in-from-bottom-2 fade-in duration-150">
+                  {[
+                    { path: '/stats', label: 'Estadísticas' },
+                    { path: '/players', label: 'Jugadores' },
+                    { path: '/history', label: 'Historial' },
+                    { path: '/settings', label: 'Perfil' },
+                  ].map(item => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setFloatingMenuOpen(false)}
+                      className="flex items-center px-4 py-3 text-sm font-semibold font-serif text-pulperia-ink/70 hover:bg-pulperia-bg transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => setFloatingMenuOpen(prev => !prev)}
+              className="h-full px-4 bg-pulperia-card border border-pulperia-border text-pulperia-ink rounded-2xl shadow-xl flex items-center justify-center transition-all hover:bg-pulperia-bg active:scale-95"
+            >
+              {floatingMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
       </div>
 
