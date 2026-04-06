@@ -33,6 +33,8 @@ export interface Match {
   status: 'in-progress' | 'completed';
   createdBy: string;
   pointHistory?: PointEvent[];
+  startedAt?: any;
+  durationMs?: number;
 }
 
 // Ordena y deduplica un array de matches por ID, más reciente primero
