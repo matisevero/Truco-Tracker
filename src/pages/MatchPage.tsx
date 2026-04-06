@@ -3,7 +3,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from '
 import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from '../firebase';
 import { useTrucoData, Match, Player, PointEvent } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
-import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag, Search, Menu } from 'lucide-react';
+import { Plus, Minus, Check, Users, Trophy, RotateCcw, Shuffle, Share2, X, Sparkles, AlertCircle, LogOut, Flag, Search, Menu, Maximize, Minimize } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function MatchPage() {
@@ -31,6 +31,23 @@ export default function MatchPage() {
   const TAP_DELAY = 800; // ms de pausa antes de confirmar
   
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      await document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
 
   const [showGuestWarning, setShowGuestWarning] = useState(() => {
     // Only show once per session if they are anonymous
@@ -618,6 +635,13 @@ export default function MatchPage() {
             title="Compartir Partido en Vivo"
           >
             <Share2 size={20} />
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 bg-pulperia-bg border border-pulperia-border text-pulperia-ink rounded-full hover:bg-pulperia-gold/20 transition-colors shadow-sm"
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          >
+            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
           </button>
         </div>
       </header>
