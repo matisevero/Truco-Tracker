@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { useState, useRef, useEffect } from 'react';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from '../firebase';
 import { useTrucoData, Match, Player, PointEvent } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
