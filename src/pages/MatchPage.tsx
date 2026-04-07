@@ -56,6 +56,25 @@ export default function MatchPage() {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  const [showGuestWarning, setShowGuestWarning] = useState(() => {
+    // Only show once per session if they are anonymous
+    const hasSeenWarning = sessionStorage.getItem('guestWarningSeen');
+    return auth.currentUser?.isAnonymous && !hasSeenWarning;
+  });
+
+  const dismissGuestWarning = () => {
+    sessionStorage.setItem('guestWarningSeen', 'true');
+    setShowGuestWarning(false);
+  };
+  
+  const historyEndRef = useRef<HTMLDivElement>(null);
+  const wakeLockRef = useRef<any>(null);
+
+  // Find if there's an in-progress match
+  const currentMatch = matches.find(m => m.status === 'in-progress');
+  // Solo el creador del partido puede sumar puntos o finalizarlo
+  const isOwner = currentMatch?.createdBy === auth.currentUser?.uid;
+
   // Cronómetro — actualiza cada segundo mientras hay partido en curso
   useEffect(() => {
     if (!currentMatch) { setElapsedSeconds(0); return; }
@@ -87,25 +106,6 @@ export default function MatchPage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [currentMatch?.id]);
-
-  const [showGuestWarning, setShowGuestWarning] = useState(() => {
-    // Only show once per session if they are anonymous
-    const hasSeenWarning = sessionStorage.getItem('guestWarningSeen');
-    return auth.currentUser?.isAnonymous && !hasSeenWarning;
-  });
-
-  const dismissGuestWarning = () => {
-    sessionStorage.setItem('guestWarningSeen', 'true');
-    setShowGuestWarning(false);
-  };
-  
-  const historyEndRef = useRef<HTMLDivElement>(null);
-  const wakeLockRef = useRef<any>(null);
-
-  // Find if there's an in-progress match
-  const currentMatch = matches.find(m => m.status === 'in-progress');
-  // Solo el creador del partido puede sumar puntos o finalizarlo
-  const isOwner = currentMatch?.createdBy === auth.currentUser?.uid;
 
   // Wake Lock API to keep screen awake during match
   useEffect(() => {
