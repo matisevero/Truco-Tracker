@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTrucoData, Match } from '../hooks/useTrucoData';
-import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, Users, ChevronDown, ChevronUp, Trash2, Edit2, X } from 'lucide-react';
@@ -12,7 +11,6 @@ export default function HistoryPage() {
   const { matches, players } = useTrucoData();
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
   const [filterPlayerId, setFilterPlayerId] = useState<string | null>(null);
-  const navigate = useNavigate();
   const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
   
   const [deletingMatch, setDeletingMatch] = useState<string | null>(null);
@@ -243,7 +241,7 @@ export default function HistoryPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           const allIds = [...match.teamUs, ...match.teamThem];
-                          navigate(`/stats?h2h=${allIds.join(',')}`);
+                          window.location.href = `/stats?h2h=${allIds.join(',')}`;
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-pulperia-gold/20 text-pulperia-gold rounded-lg text-xs font-bold hover:bg-pulperia-gold/30 transition-colors border border-pulperia-gold/30"
                         style={{ color: '#b8960c' }}

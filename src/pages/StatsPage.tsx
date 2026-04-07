@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTrucoData } from '../hooks/useTrucoData';
 import { getSpanishCardAvatar } from '../utils/avatar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
@@ -41,16 +40,16 @@ export default function StatsPage() {
   const [hideLost, setHideLost] = useState(false);
   const [h2pA, setH2pA] = useState<string>('');
   const [h2pB, setH2pB] = useState<string>('');
-  const [searchParams] = useSearchParams();
 
   // Leer query param ?h2h=id1,id2,... desde el historial
   useEffect(() => {
-    const h2h = searchParams.get('h2h');
+    const params = new URLSearchParams(window.location.search);
+    const h2h = params.get('h2h');
     if (h2h && players.length > 0) {
       const ids = h2h.split(',');
       if (ids.length >= 2) { setH2pA(ids[0]); setH2pB(ids[1]); }
     }
-  }, [searchParams, players]);
+  }, [players]);
 
   const handleLegendClick = (e: any) => {
     if (e.dataKey === 'A' || e.dataKey === 'hiddenA') setHideWon(prev => !prev);
